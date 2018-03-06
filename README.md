@@ -4,8 +4,8 @@
 1. Create the twitter topic `${KAFKA_PATH}/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partitions 1 --topic twitter_json --replication-factor 1`
 2. Clone the following [repo](https://github.com/jcustenborder/kafka-connect-twitter)
 3. Build the connector `mvn clean package`
-4. Make it visible for Kafka connect `export CLASSPATH="$(find target/kafka-connect-target/usr/share/kafka-connect -type f -name '*.jar' | tr '\n' ':')"` 
-5. Change connect/twitter.properties to add your twitter tokens
+4. Make it visible for Kafka connect `export CLASSPATH="$(find target/kafka-connect-target/usr/share/kafka-connect/kafka-connect-twitter/ -type f -name '*.jar' | tr '\n' ':')"` 
+5. Change connect/twitter.properties to add your twitter tokens (use [twitter app manager](https://apps.twitter.com/))
 6. Start kafka connect `${KAFKA_PATH}/bin/connect-standalone /etc/kafka/connect-standalone.properties connect/twitter.properties`
 
 ## Streamer
