@@ -33,11 +33,18 @@ bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test
 > {"action": "STOP", "name": "sound1"}
 ```
 
+To start the streamer application :
+`./gradlew build && ./gradlew bootRun`
+
 (To complete)
 
 ## Client
 
 Client app will listen for incoming message from streamer app by using SSE mechanism.
 You need to provide ogg audio files in (client/audio) in order to play music.
+
+The client needs a simple http server to be running.
+You can use [live-server](https://www.npmjs.com/package/live-server)
+`live-server .`
 
 (To complete)
