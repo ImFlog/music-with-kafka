@@ -34,7 +34,7 @@ function createAudioSource(ctx, data) {
 timerWorker.onmessage = (event) => {
     if (event.data === 'tick') {
         while (eventQueue.length) {
-            eventQueue.pop()(0)
+            eventQueue.shift()(0)
         }  
     } else {
         console.log(`message: ${event.data}`)
