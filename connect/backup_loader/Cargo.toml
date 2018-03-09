@@ -1,0 +1,7 @@
+[package]
+name = "backup_loader"
+version = "0.1.0"
+authors = ["ImFlog <garcia.florian.perso@gmail.com>"]
+
+[dependencies]
+rand = "0.4"
