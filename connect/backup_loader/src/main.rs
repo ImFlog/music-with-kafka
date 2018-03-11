@@ -76,15 +76,13 @@ fn read_template_content() -> String {
 }
 
 fn send_kafka_message(tweet: String) {
-    let tweet_echo = format!("echo \"{}\"", tweet);
+    let cmd = format!("echo \"{}\" | $KAFKA_HOME/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic twitter_json", tweet);
     let output = Command::new("sh")
         .arg("-c")
-        .arg(tweet_echo)
-        .arg(" | ")
-        .arg("$KAFKA_HOME/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic twitter_json")
+        .arg(cmd)
         .output()
         .expect("failed to execute process");
+    println!("sending {}", tweet);
     println!("status: {}", output.status);
-    println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
     println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
 }
