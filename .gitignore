@@ -36,3 +36,7 @@ hs_err_pid*
 *.ogg
 *.wav
 *.mp3
+
+#Javascript
+dist/
+node_modules/
