@@ -10,42 +10,74 @@ const processPlay$ = new Rx.Subject();
 const processStop$ = new Rx.Subject();
 const release$ = new Rx.Subject();
 
+//Mapping of our sounds
 
-const mapping = {
+const soundsDefinition = {
+    melodies: {
+        path: (index) => `../audio/sounds/melodies/melody${index + 1}.ogg`,
+        name: (index) => `melody${index + 1}`,
+        size: 4
+    },
+    pads: {
+        path: (index) => `../audio/sounds/pads/pad${index + 1}.ogg`,
+        name: (index) => `pad${index + 1}`,
+        size: 2
+    },
+    synths: {
+        path: (index) => `../audio/sounds/synths/synth${index + 1}.ogg`,
+        name: (index) => `synth${index + 1}`,
+        size: 4
+    },
+    vocals: {
+        path: (index) => `../audio/sounds/vocals/vocal${index + 1}.ogg`,
+        name: (index) => `vocal${index + 1}`,
+        size: 6
+    }  
+};
+
+const drumsDefinition = {
     drum: {
-        path: (index) => `../audio/drum${index + 1}.ogg`,
-        name: (index) => `drum${index + 1}`
+        path: (index) => `../audio/drums/drum${index + 1}.ogg`,
+        name: (index) => `drum${index + 1}`,
+        size: 10
+    }
+};
+
+const bassDefinition = {
+    heavy: {
+        path: (index) => `../audio/bass/heavy/heavy${index + 1}.ogg`,
+        name: (index) => `heavy${index + 1}`,
+        size: 4
     },
-    bass: {
-        path: (index) => `../audio/bass${index + 1}.ogg`,
-        name: (index) => `bass${index + 1}`
+    lead: {
+        path: (index) => `../audio/bass/lead/lead${index + 1}.ogg`,
+        name: (index) => `lead${index + 1}`,
+        size: 2
     },
-    sound: {
-        path: (index) => `../audio/sounds${index + 1}.ogg`,
-        name: (index) => `sound${index + 1}`
+    line: {
+        path: (index) => `../audio/bass/line/line${index + 1}.ogg`,
+        name: (index) => `line${index + 1}`,
+        size: 4
     }
 }
 
 
 function fetchFile(mapping) {
-    const keys = [...Array(10).keys()]
-    const keys2 = [...Array(16).keys()]
-    
-    const drumsName = keys.map(x => [mapping.drum.path(x), mapping.drum.name(x)])
-    const bassName = keys.map(x => [mapping.bass.path(x), mapping.bass.name(x)])
-    const soundName = keys2.map(x => [mapping.sound.path(x), mapping.sound.name(x)])
 
-    const drums = Rx.Observable.from(drumsName)
-        .mergeMap(([filepath, name]) => Rx.Observable.of( { name, fetch: loadAudioData(fetch(filepath))} ));
+    const mappings = Object
+        .keys(mapping)
+        .map(key => {
+            const musicDefinition = mapping[key];
+            return [...Array(musicDefinition.size).keys()].map(index => [musicDefinition.path(index), musicDefinition.name(index)])
+        });
 
-    const bass = Rx.Observable.from(bassName)
-        .mergeMap(([filepath, name]) => Rx.Observable.of( { name, fetch: loadAudioData(fetch(filepath))} ));
-    
-    const sounds = Rx.Observable.from(soundName)
-        .mergeMap(([filepath, name]) => Rx.Observable.of( { name, fetch: loadAudioData(fetch(filepath))} ));
-
-        
-    return { drums, bass, sounds }
+    return mappings
+        .map(audioDef => {
+            return Rx
+                .Observable
+                .from(audioDef)
+                .mergeMap(([file, name]) => Rx.Observable.of({ name, fetch: loadAudioData(fetch(file)) }));
+        });
 }
 
 function loadAudioData(promise) {
@@ -78,11 +110,9 @@ timerWorker.onmessage = (event) => {
 timerWorker.postMessage({interval: MAGIC_NUMBER})
 
 
-const { drums, bass, sounds } = fetchFile(mapping)
-
 Rx
     .Observable
-    .merge(drums, bass, sounds)
+    .merge(...fetchFile({...soundsDefinition, ...drumsDefinition, ...bassDefinition}))
     .mergeMap(info => Rx.Observable.combineLatest(Rx.Observable.of(info.name), info.fetch))
     .toArray()
     .subscribe(array => {
@@ -92,6 +122,8 @@ Rx
         timerWorker.postMessage('start');
     })
 
+
+//SSE
 const sse = new EventSource('http://localhost:8090/stream');
 
 sse.onmessage = (event) => {
@@ -104,6 +136,7 @@ sse.onmessage = (event) => {
 }
 
 
+//high order functions to process music sound
 const safePlay = (name) => (map) => (set) => {
     if (!set.has(name)) {
         set.add(name)
@@ -131,6 +164,8 @@ const applyPlayOrStop = (rsValue) => (audioMapValue) => (fnArray) => {
     return fnArray.reduce(([rs, map], playOrStop) => playOrStop(map)(rs), [rsValue, audioMapValue])
 }
 
+
+//Process rxjs stream
 const safePlay$ = processPlay$
     .do(event => console.log(event))
     .concatMap(json => Rx.Observable.of(safePlay(json.name)))
