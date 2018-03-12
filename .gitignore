@@ -40,3 +40,4 @@ hs_err_pid*
 #Javascript
 dist/
 node_modules/
+.listing
