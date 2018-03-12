@@ -34,3 +34,5 @@ hs_err_pid*
 
 # audio files
 *.ogg
+*.wav
+*.mp3
