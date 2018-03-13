@@ -9,10 +9,15 @@ use std::path::Path;
 use std::process::Command;
 
 const SOURCES: [&'static str; 3] = ["iphone", "web", "android"];
-const TEXTS: [&'static str; 3] = [
+const TEXTS: [&'static str; 8] = [
     "Give me some drum #musicwithkafka",
-    "I want bass #musicwithkafka",
-    "How about other sound #musicwithkafka",
+    "I want some heavy bass #musicwithkafka",
+    "I want some lead_bass #musicwithkafka",
+    "I want some line bass #musicwithkafka",
+    "How about a melody ? #musicwithkafka",
+    "And a pad ? #musicwithkafka",
+    "And synth ? #musicwithkafka",
+    "Vocal ftw ! #musicwithkafka",
 ];
 const USERS: [(&'static str, &'static str); 10] = [
     ("monty", "https://static.boredpanda.com/blog/wp-content/uploads/2014/11/most-popular-cats-monty-2.jpg"),
@@ -72,17 +77,25 @@ fn read_template_content() -> String {
         Err(why) => panic!("couldn't read {}: {}", display, why.description()),
         Ok(_) => (),
     };
+    s = format!("{{\\\"Id\\\": 1923792781}}&{}", s);
     return s;
 }
 
+/*
+TODO: we should find a way to reduce the cmd size
+*/
 fn send_kafka_message(tweet: String) {
-    let cmd = format!("echo \"{}\" | $KAFKA_HOME/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic twitter_json", tweet);
+    let cmd = format!("echo -n \"{}\" | {}",
+    tweet,
+    "$KAFKA_HOME/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic twitter_json --property \"parse.key=true\" --property \"key.separator=&\"");
+    println!("sending {}", cmd);
     let output = Command::new("sh")
         .arg("-c")
         .arg(cmd)
         .output()
         .expect("failed to execute process");
-    println!("sending {}", tweet);
     println!("status: {}", output.status);
-    println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+    if String::from_utf8_lossy(&output.stderr) != "" {
+        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+    }
 }

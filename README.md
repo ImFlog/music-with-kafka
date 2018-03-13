@@ -4,7 +4,13 @@ This repository contains material for the Devoxx 2018 university "De la musique 
 ## Prerequisites
 1. You need to have a locally running Kafka broker on port 9092.
 2. You need to set the environment variable $KAFKA_HOME (i.e : /usr/share/kafka).
-3. You also need to find some .ogg files to play (more informations in the Streamer part).
+3. You also need to find some .ogg files to play. Please use the following configuration : directories and files should be named the same way. i.e:
+bass\
+     bass0.ogg
+     bass1.ogg
+vocal\
+     vocal0.ogg
+     ... 
 
 ## Kafka Connect
 1. Create the twitter topic `$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partitions 1 --topic twitter_json --replication-factor 1`
@@ -16,6 +22,12 @@ This repository contains material for the Devoxx 2018 university "De la musique 
 
 For testing purpose, you can run the loader_script located in /connect. It will inject fake tweets in you twitter_json topic and you will be able to run the rest of the code.
 
+## Kafka Streams
+1. Create the topics
+`$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partitions 1 --topic sounds --replication-factor 1
+$$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partitions 1 --topic users --replication-factor 1`
+2. Launch the streaming application `./gradlew build && ./gradlew bootRun`
+
 ## Streamer
 
 Streamer app needs a kafka server and a `test` topic.
@@ -26,19 +38,19 @@ Possible values for action:
 * `PLAY`
 * `STOP`
 
-Possible values for name:
-* `drum[1-10]`
-* `bass[1-10]`
-* `sound[1-16]`
+Possible values are the path of the files you want to play in the audio directory. For example :
+* `drum/drum[1-10].ogg`
+* `bass/bass[1-10].ogg`
+* `sound/sound[1-16].ogg`
 
 Example:
 
 ``` sh
 bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test
-> {"action": "PLAY", "name": "sound1"}
-> {"action": "PLAY", "name": "drum4"}
-> {"action": "PLAY", "name": "bass6"}
-> {"action": "STOP", "name": "sound1"}
+> {"action": "PLAY", "name": "sound/sound1.ogg"}
+> {"action": "PLAY", "name": "drum/drum4.ogg"}
+> {"action": "PLAY", "name": "bass/bass6.ogg"}
+> {"action": "STOP", "name": "sound/sound1.ogg"}
 ```
 
 To start the streamer application :
