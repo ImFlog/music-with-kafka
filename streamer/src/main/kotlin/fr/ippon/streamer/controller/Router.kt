@@ -1,4 +1,4 @@
-package fr.ippon.streamer
+package fr.ippon.streamer.controller
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

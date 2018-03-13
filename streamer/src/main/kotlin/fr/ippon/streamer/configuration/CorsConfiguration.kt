@@ -1,4 +1,4 @@
-package fr.ippon.streamer
+package fr.ippon.streamer.configuration
 
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod

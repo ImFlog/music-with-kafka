@@ -168,10 +168,12 @@ const applyPlayOrStop = (rsValue) => (audioMapValue) => (fnArray) => {
 //Process rxjs stream
 const safePlay$ = processPlay$
     .do(event => console.log(event))
+    .filter(json => audioMap$.getValue().has(json.name))
     .concatMap(json => Rx.Observable.of(safePlay(json.name)))
 
 const safeStop$ = processStop$
     .do(event => console.log(event))
+    .filter(json => audioMap$.getValue().has(json.name))
     .concatMap(json => Rx.Observable.of(safeStop(json.name)))
 
 Rx
