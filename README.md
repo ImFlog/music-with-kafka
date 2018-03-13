@@ -1,4 +1,4 @@
-# music-with-kafka
+# :musical_note: music-with-kafka :speaker: :notes:
 This repository contains material for the Devoxx 2018 university "De la musique collaborative avec Kafka".
 
 ## Prerequisites
