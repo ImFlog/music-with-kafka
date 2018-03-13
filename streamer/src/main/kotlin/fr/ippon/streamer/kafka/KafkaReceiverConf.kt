@@ -1,4 +1,4 @@
-package fr.ippon.streamer
+package fr.ippon.streamer.kafka
 
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.IntegerDeserializer
