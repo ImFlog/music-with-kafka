@@ -14,7 +14,7 @@ class KafkaReceiverConf {
 
     private val bootstrapServer = "localhost:9092"
     private val groupID = "sample-group"
-    private val topic = "test"
+    private val topic = "sounds"
 
     @Bean
     fun kafkaDataReceiver(): KafkaReceiver<Int, String> {

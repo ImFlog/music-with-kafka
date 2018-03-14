@@ -27,6 +27,7 @@ For testing purpose, you can run the loader_script located in /connect. It will 
 `$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partitions 1 --topic sounds --replication-factor 1
 $$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partitions 1 --topic users --replication-factor 1`
 2. Launch the streaming application `./gradlew build && ./gradlew bootRun`
+3. You can check the messages are correctly written in your topic using `$KAFKA_HOME/bin/kafka-console-consumer.sh --topic sounds --bootstrap-server localhost:9092 --property "print.key=true`
 
 ## Streamer
 

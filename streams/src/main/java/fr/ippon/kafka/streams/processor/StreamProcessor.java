@@ -76,10 +76,7 @@ public class StreamProcessor implements CommandLineRunner {
                     .filter((key, value) -> matchCategory(category, value))
                     .groupBy((key, value) -> category.getKey(), Serialized.with(Serdes.String(), twitterStatusSerde))
                     .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME))) // Tumbling windowing
-                    .aggregate(
-                            () -> 0L, /* initializer */
-                            (aggKey, newValue, aggValue) -> aggValue + 1, /* adder */
-                            Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(TWEET_PER_CATEGORY + category.getKey()).withValueSerde(Serdes.Long()))
+                    .count(Materialized.with(Serdes.String(), Serdes.Long()))
                     .toStream()
                     .mapValues(value -> new SoundMessage(String.format("%s/%s%d.ogg",
                             category.getKey(),
