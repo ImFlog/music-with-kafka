@@ -31,7 +31,7 @@ $$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partition
 
 ## Streamer
 
-Streamer app needs a kafka server and a `test` topic.
+Streamer app needs a kafka server and a `sounds` topic.
 
 Then, streamer app react to message of type `{"action":string, "name":string}` on topic `test`
 

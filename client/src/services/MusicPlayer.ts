@@ -9,6 +9,8 @@ enum MUSIC_STATE {
   STOPPING = 2
 }
 
+const MUSIC_PATH = 'audio/';
+
 export class Music {
   @observable name: string;
   buffer: AudioBufferSourceNode;
@@ -44,9 +46,9 @@ class MusicPlayer {
 
   private _soundWorker(){
     this.musics.forEach(music => {
-      if (music.state === 2){
+      if (music.state === MUSIC_STATE.STOPPING){
         music.buffer.stop();
-      } else if (music.state !== 1){
+      } else if (music.state !== MUSIC_STATE.PLAYING){
         music.buffer.start();
         music.state = MUSIC_STATE.PLAYING;
       }
@@ -56,7 +58,7 @@ class MusicPlayer {
 
   private _removedStoppedMusic(){
     const newMusics = this.musics.filter(music => {
-      return music.state === 1
+      return music.state === MUSIC_STATE.PLAYING
     })
 
     this.musics.replace(newMusics);
@@ -68,7 +70,7 @@ class MusicPlayer {
 
   private _loadSound(musicName: string) {
     const request = new XMLHttpRequest();
-    const musicPath = 'audio/' + musicName + '.ogg';
+    const musicPath = MUSIC_PATH + musicName;
     request.open('GET', musicPath, true);
     request.responseType = 'arraybuffer';
 
