@@ -71,7 +71,6 @@ public class StreamProcessor implements CommandLineRunner {
 
         // 2. Divide the stream per sound and send a message to SOUNDS_TOPIC for each one.
         for (Map.Entry<String, Integer> category : categories.entrySet()) {
-            System.out.println(category.getKey());
             twitterStream
                     .filter((key, value) -> matchCategory(category, value))
                     .groupBy((key, value) -> category.getKey(), Serialized.with(Serdes.String(), twitterStatusSerde))
@@ -134,7 +133,7 @@ public class StreamProcessor implements CommandLineRunner {
         if (subFiles == null) {
             return 0;
         }
-        return subFiles.length;
+        return subFiles.length - 1;
     }
 
     public ReadOnlyKeyValueStore<String, Long> getTweetCountPerUser() {

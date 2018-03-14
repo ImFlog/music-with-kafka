@@ -2,13 +2,13 @@ package fr.ippon.kafka.streams.serdes.pojos;
 
 public class SoundMessage {
     private String action = "PLAY";
-    private String name;
+    private String path;
 
     public SoundMessage() {
     }
 
-    public SoundMessage(String name) {
-        this.name = name;
+    public SoundMessage(String path) {
+        this.path = path;
     }
 
     public String getAction() {
@@ -19,11 +19,11 @@ public class SoundMessage {
         this.action = action;
     }
 
-    public String getName() {
-        return name;
+    public String getPath() {
+        return path;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setPath(String path) {
+        this.path = path;
     }
 }
