@@ -1,9 +1,9 @@
 export default class MusicEvent {
-    name: string;
+    path: string;
     action: string;
   
-    constructor(name: string, action: string) {
-      this.name = name;
+    constructor(path: string, action: string) {
+      this.path = path;
       this.action = action;
     }
   }

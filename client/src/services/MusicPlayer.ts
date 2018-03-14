@@ -35,10 +35,10 @@ class MusicPlayer {
   processMusic(musicEvent: MusicEvent) {
     console.log("Received event", musicEvent)
     if (musicEvent.action === 'PLAY') {
-      this._addToPlaylist(musicEvent.name)
+      this._addToPlaylist(musicEvent.path)
     } else if (musicEvent.action === 'STOP') {
       let music = this.musics.find((music) => {
-        return music.name === musicEvent.name
+        return music.name === this._formatMusicName(musicEvent.path)
       });
       music.state = MUSIC_STATE.STOPPING;
     }
@@ -64,13 +64,13 @@ class MusicPlayer {
     this.musics.replace(newMusics);
   }
 
-  private _addToPlaylist(musicName: string) {
-    this._loadSound(musicName);
+  private _addToPlaylist(musicPath: string) {
+    this._loadSound(musicPath);
   }
 
-  private _loadSound(musicName: string) {
+  private _loadSound(musicPath: string) {
     const request = new XMLHttpRequest();
-    const musicPath = MUSIC_PATH + musicName;
+    musicPath = MUSIC_PATH + musicPath;
     request.open('GET', musicPath, true);
     request.responseType = 'arraybuffer';
 
@@ -79,7 +79,7 @@ class MusicPlayer {
     // Decode asynchronously
     request.onload = function () {
       _this.audioCtx.decodeAudioData(request.response, (buffer: AudioBuffer) => {
-        _this.musics.push(_this._buildMusic(musicName, buffer));
+        _this.musics.push(_this._buildMusic(_this._formatMusicName(musicPath), buffer));
       });
     }
     request.send();
@@ -94,6 +94,10 @@ class MusicPlayer {
     bufferSrc.loopEnd = LOOP_LENGTH
 
     return new Music(musicName, bufferSrc)
+  }
+
+  private _formatMusicName(musicPath: string): string {
+    return musicPath.split('.')[0];
   }
 
 }

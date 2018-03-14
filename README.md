@@ -33,7 +33,7 @@ $$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partition
 
 Streamer app needs a kafka server and a `sounds` topic.
 
-Then, streamer app react to message of type `{"action":string, "name":string}` on topic `test`
+Then, streamer app react to message of type `{"action":string, "path":string}` on topic `sounds`
 
 Possible values for action: 
 * `PLAY`
@@ -48,10 +48,10 @@ Example:
 
 ``` sh
 bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test
-> {"action": "PLAY", "name": "sound/sound1.ogg"}
-> {"action": "PLAY", "name": "drum/drum4.ogg"}
-> {"action": "PLAY", "name": "bass/bass6.ogg"}
-> {"action": "STOP", "name": "sound/sound1.ogg"}
+> {"action": "PLAY", "path": "sound/sound1.ogg"}
+> {"action": "PLAY", "path": "drum/drum4.ogg"}
+> {"action": "PLAY", "path": "bass/bass6.ogg"}
+> {"action": "STOP", "path": "sound/sound1.ogg"}
 ```
 
 To start the streamer application :

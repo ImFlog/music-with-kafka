@@ -28,7 +28,9 @@ module.exports = {
   plugins: [
     new webpack.HotModuleReplacementPlugin(),
     new webpack.NamedModulesPlugin(),
-    new HtmlWebpackPlugin(),
+    new HtmlWebpackPlugin({
+      title: 'Music With Kafka'
+    }),
     new CopyWebpackPlugin([
       { from: '../../audio', to: resolve(__dirname, 'dist/audio') }
     ])
