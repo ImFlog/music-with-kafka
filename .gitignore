@@ -46,3 +46,6 @@ hs_err_pid*
 dist/
 node_modules/
 .listing
+
+#VSCode project
+*.code-workspace

@@ -30,7 +30,7 @@ module.exports = {
     new webpack.NamedModulesPlugin(),
     new HtmlWebpackPlugin(),
     new CopyWebpackPlugin([
-      { from: '../audio', to: resolve(__dirname, 'dist/audio') }
+      { from: '../../audio', to: resolve(__dirname, 'dist/audio') }
     ])
   ],
 
