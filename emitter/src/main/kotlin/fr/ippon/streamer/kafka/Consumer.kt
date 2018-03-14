@@ -8,7 +8,7 @@ import reactor.core.publisher.Flux
 import reactor.kafka.receiver.KafkaReceiver
 
 @Service
-class Consumer(private val kafkaDataReceiver: KafkaReceiver<Int, String>, private val mapper: ObjectMapper) {
+class Consumer(private val kafkaDataReceiver: KafkaReceiver<String, String>, private val mapper: ObjectMapper) {
 
     final val stream: Flux<Payload> by lazy {
         kafkaDataReceiver.receive()

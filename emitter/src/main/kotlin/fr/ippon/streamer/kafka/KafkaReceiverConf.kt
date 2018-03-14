@@ -17,15 +17,15 @@ class KafkaReceiverConf {
     private val topic = "sounds"
 
     @Bean
-    fun kafkaDataReceiver(): KafkaReceiver<Int, String> {
+    fun kafkaDataReceiver(): KafkaReceiver<String, String> {
         val props: Map<String, Any> = mapOf(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServer,
                 ConsumerConfig.GROUP_ID_CONFIG to groupID,
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to IntegerDeserializer::class.java,
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java
         )
         val options = ReceiverOptions
-                .create<Int, String>(props)
+                .create<String, String>(props)
                 .subscription(setOf(topic))
                 .addAssignListener { p -> p.forEach(ReceiverPartition::seekToBeginning) }
         return KafkaReceiver.create(options)

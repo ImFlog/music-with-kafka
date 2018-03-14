@@ -29,11 +29,8 @@ $$KAFKA_HOME/bin/kafka-topics.sh --zookeeper localhost:2181 --create --partition
 2. Launch the streaming application `./gradlew build && ./gradlew bootRun`
 3. You can check the messages are correctly written in your topic using `$KAFKA_HOME/bin/kafka-console-consumer.sh --topic sounds --bootstrap-server localhost:9092 --property "print.key=true`
 
-## Streamer
-
-Streamer app needs a kafka server and a `sounds` topic.
-
-Then, streamer app react to message of type `{"action":string, "path":string}` on topic `sounds`
+## Emitter (SSE toward the frontend)
+Streamer app react to message of type `{"action":string, "path":string}` on topic `sounds`
 
 Possible values for action: 
 * `PLAY`
@@ -54,10 +51,8 @@ bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test
 > {"action": "STOP", "path": "sound/sound1.ogg"}
 ```
 
-To start the streamer application :
+To start the emitter application :
 `./gradlew build && ./gradlew bootRun`
-
-(To complete)
 
 ## Client
 
