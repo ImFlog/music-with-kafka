@@ -1,51 +1,57 @@
 package fr.ippon.kafka.streams.processor;
 
+import static fr.ippon.kafka.streams.serdes.SerdeFactory.createWindowedStringSerde;
+
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
 import fr.ippon.kafka.streams.serdes.pojos.SoundMessage;
 import fr.ippon.kafka.streams.serdes.pojos.TwitterStatus;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.streams.Consumed;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-import org.apache.kafka.streams.state.SessionStore;
-import org.apache.kafka.streams.state.WindowStore;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.PreDestroy;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-
-import static fr.ippon.kafka.streams.serdes.SerdeFactory.createWindowedStringSerde;
+import javax.annotation.PreDestroy;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.Consumed;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.KGroupedStream;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Printed;
+import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Serialized;
+import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.kstream.Windowed;
+import org.apache.kafka.streams.state.QueryableStoreTypes;
+import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class StreamProcessor implements CommandLineRunner {
 
-    private static final Long WINDOWING_TIME = 30L;
+    private static final Long WINDOWING_SOUNDS_TIME = 30L;
+    private static final Long WINDOWING_CHARTS_TIME = 10L;
 
     // Input topics
     private static final String TWITTER_TOPIC = "twitter_json";
     // Output topics
     private static final String SOUNDS_TOPIC = "sounds";
     private static final String USERS_TOPIC = "users";
+    private static final String CHARTS_TOPIC = "charts";
 
     // Store names
     private static final String TWEET_PER_USER = "tweetPerUser";
-    private static final String TWEET_PER_CATEGORY = "tweetPerCategory_";
+    private static final String TWEET_PER_CATEGORY = "tweetPerCategory";
 
     private KafkaStreams streams;
 
@@ -56,7 +62,7 @@ public class StreamProcessor implements CommandLineRunner {
         Map<String, Object> serdeProps = new HashMap<>();
         Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
         Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
-        Serde<Windowed<String>> windowedStringSerde = createWindowedStringSerde(WINDOWING_TIME);
+        Serde<Windowed<String>> windowedStringSerde = createWindowedStringSerde(WINDOWING_SOUNDS_TIME);
 
         // Create an instance of StreamsConfig from the Properties instance
         StreamsConfig config = new StreamsConfig(getProperties());
@@ -64,39 +70,63 @@ public class StreamProcessor implements CommandLineRunner {
 
         // 1. Simply read the stream
         KStream<String, TwitterStatus> twitterStream = streamsBuilder.stream(
-                TWITTER_TOPIC,
-                Consumed.with(Serdes.String(), twitterStatusSerde));
+            TWITTER_TOPIC,
+            Consumed.with(Serdes.String(), twitterStatusSerde));
         twitterStream.print(Printed.toSysOut());
 
+        // 2. Divide the stream per category.
+        KGroupedStream<String, TwitterStatus> tweetsGroupByCategories =
+            twitterStream.groupBy((key, value) -> findCategory(value, categories),
+                Serialized.with(Serdes.String(), twitterStatusSerde));
 
-        // 2. Divide the stream per sound and send a message to SOUNDS_TOPIC for each one.
-        for (Map.Entry<String, Integer> category : categories.entrySet()) {
-            twitterStream
-                    .filter((key, value) -> matchCategory(category, value))
-                    .groupBy((key, value) -> category.getKey(), Serialized.with(Serdes.String(), twitterStatusSerde))
-                    .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME))) // Tumbling windowing
-                    .count(Materialized.with(Serdes.String(), Serdes.Long()))
-                    .toStream()
-                    .mapValues(value -> new SoundMessage(String.format("%s/%s%d.ogg",
-                            category.getKey(),
-                            category.getKey(),
-                            value % category.getValue())))
-                    .to(SOUNDS_TOPIC, Produced.with(windowedStringSerde, soundMessageSerde));
-        }
+        // 3. Send a message to SOUNDS_TOPIC for each category every WINDOWING_SOUNDS_TIME.
+        tweetsGroupByCategories
+            .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_SOUNDS_TIME))) // Tumbling windowing
+            .count(Materialized.with(Serdes.String(), Serdes.Long()))
+            .toStream()
+            .map((windowedKey, value) -> new KeyValue<>(windowedKey, new SoundMessage(String.format("%s/%s%d.ogg",
+                windowedKey.key(),
+                windowedKey.key(),
+                value % categories.get(windowedKey.key())))))
+            .to(SOUNDS_TOPIC, Produced.with(windowedStringSerde, soundMessageSerde));
 
-        // 3. Count the user who tweeted the most on #musicwithkafka
+        // 4. Count tweets for a given category in a shorter window (WINDOWING_CHARTS_TIME). Send them to the CHARTS_TOPIC
+        tweetsGroupByCategories
+            .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_CHARTS_TIME)))// Tumbling windowing
+            .count()
+            .toStream()
+            .groupBy((key, value) -> key.key(), Serialized.with(Serdes.String(), Serdes.Long()))
+            .count(Materialized.as(TWEET_PER_CATEGORY))
+            .toStream()
+            .to(CHARTS_TOPIC, Produced.with(Serdes.String(), Serdes.Long()));
+
+        // 5. Count the user who tweeted the most on #musicwithkafka
         twitterStream
-                .groupBy((key, value) -> value.getUser().getName(), Serialized.with(Serdes.String(), twitterStatusSerde))
-                .count(Materialized.as(TWEET_PER_USER))
-                .toStream()
-                .to(USERS_TOPIC, Produced.valueSerde(Serdes.Long()));
-
-        // 4. TODO: charts stream
+            .groupBy((key, value) -> value.getUser().getName(), Serialized.with(Serdes.String(), twitterStatusSerde))
+            .count(Materialized.as(TWEET_PER_USER))
+            .toStream()
+            .to(USERS_TOPIC, Produced.valueSerde(Serdes.Long()));
 
         streams = new KafkaStreams(streamsBuilder.build(), config);
         // Clean local store between runs
         streams.cleanUp();
         streams.start();
+    }
+
+    /**
+     * Finds the category associated to a tweet
+     *
+     * @param value Tweet
+     * @param categories Map of available categories
+     * @return The category key if found. Null if not
+     */
+    private String findCategory(TwitterStatus value, Map<String, Integer> categories) {
+        for (Map.Entry<String, Integer> category : categories.entrySet()) {
+            if (matchCategory(category, value)) {
+                return category.getKey();
+            }
+        }
+        return null;
     }
 
     /**
@@ -106,9 +136,9 @@ public class StreamProcessor implements CommandLineRunner {
     private boolean matchCategory(Map.Entry<String, Integer> category, TwitterStatus value) {
         String tweetText = value.getText().toLowerCase();
         return tweetText.contains(category.getKey()) ||
-                tweetText.contains(category.getKey()
-                        .replace("-", " ")
-                        .replace("_", " "));
+            tweetText.contains(category.getKey()
+                .replace("-", " ")
+                .replace("_", " "));
     }
 
     /**
