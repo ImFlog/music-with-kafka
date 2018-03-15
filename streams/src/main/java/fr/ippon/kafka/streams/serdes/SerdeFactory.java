@@ -22,13 +22,4 @@ public class SerdeFactory {
 
         return Serdes.serdeFrom(serializer, deserializer);
     }
-
-    /**
-     * Waiting for https://github.com/apache/kafka/pull/3307 to be released
-     */
-    public static Serde<Windowed<String>> createWindowedStringSerde(Long windowSize) {
-        WindowedSerializer<String> windowedSerializer = new WindowedSerializer<>(Serdes.String().serializer());
-        WindowedDeserializer<String> windowedDeserializer = new WindowedDeserializer<>(Serdes.String().deserializer(), windowSize);
-        return Serdes.serdeFrom(windowedSerializer, windowedDeserializer);
-    }
 }

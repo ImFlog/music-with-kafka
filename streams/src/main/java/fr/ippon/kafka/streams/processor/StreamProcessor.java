@@ -3,15 +3,6 @@ package fr.ippon.kafka.streams.processor;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
 import fr.ippon.kafka.streams.serdes.pojos.SoundMessage;
 import fr.ippon.kafka.streams.serdes.pojos.TwitterStatus;
-
-import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-import javax.annotation.PreDestroy;
-
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -35,6 +26,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PreDestroy;
+import java.io.File;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -64,7 +63,6 @@ public class StreamProcessor implements CommandLineRunner {
         Map<String, Object> serdeProps = new HashMap<>();
         Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
         Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
-//        Serde<Windowed<String>> windowedStringSerde = createWindowedStringSerde(WINDOWING_SOUNDS_TIME);
 
         // Create an instance of StreamsConfig from the Properties instance
         StreamsConfig config = new StreamsConfig(getProperties());
@@ -88,6 +86,7 @@ public class StreamProcessor implements CommandLineRunner {
                         .withKeySerde(Serdes.String())
                         .withValueSerde(Serdes.Long()))
                 .toStream()
+//                .filter(((key, value) -> key != null)) DO WE HAVE TO ADD THIS ?
                 .map((windowedKey, value) ->
                         new KeyValue<>(windowedKey.key() + "@" + windowedKey.window().start() + "->" + windowedKey.window().end(),
                                 new SoundMessage(String.format("%s/%s%d.ogg",
@@ -103,6 +102,7 @@ public class StreamProcessor implements CommandLineRunner {
                         .withKeySerde(Serdes.String())
                         .withValueSerde(Serdes.Long()))
                 .toStream()
+//                .filter(((key, value) -> key != null)) // DO WE HAVE TO ADD THIS ?
                 .map((windowedKey, value) ->
                         new KeyValue<>(windowedKey.key() + "@" + windowedKey.window().start() + "->" + windowedKey.window().end(), value))
                 .to(CHARTS_TOPIC, Produced.with(Serdes.String(), Serdes.Long()));
