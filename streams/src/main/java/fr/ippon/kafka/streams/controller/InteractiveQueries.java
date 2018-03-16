@@ -1,6 +1,6 @@
 package fr.ippon.kafka.streams.controller;
 
-import fr.ippon.kafka.streams.processor.StreamProcessor;
+import fr.ippon.kafka.streams.processor.UsersTopology;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,9 +15,9 @@ import java.util.stream.Collectors;
 @RestController
 public class InteractiveQueries {
 
-    private StreamProcessor processor;
+    private UsersTopology processor;
 
-    public InteractiveQueries(StreamProcessor processor) {
+    public InteractiveQueries(UsersTopology processor) {
         this.processor = processor;
     }
 
