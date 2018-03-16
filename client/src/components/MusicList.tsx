@@ -1,6 +1,6 @@
 import * as React from "react";
 import {observer} from "mobx-react";
-import { Music } from '../services/MusicPlayer';
+import { Music, MUSIC_STATE } from '../beans/Music';
 
 export interface MusicListProps {
   musics: Music[]
@@ -10,7 +10,7 @@ export interface MusicListProps {
 export default class MusicList extends React.Component<MusicListProps, undefined> {
 
   render(){
-    const musics = this.props.musics.map((music, idx) => (
+    const musics = this.props.musics.filter((music) => music.state !== MUSIC_STATE.STOP).map((music, idx) => (
       <div key={idx}>{music.name}</div>
     ));
     return (
