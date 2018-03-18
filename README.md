@@ -63,3 +63,6 @@ To start the client :
 `yarn install && yarn start`
 
 (To complete)
+
+## KSQL
+You will need a KSQL client. Follow the [KSQL setup](https://github.com/confluentinc/ksql/tree/v0.5/docs/quickstart#setup) to do so. Then you can try the queries in ksql/queries.sql.
