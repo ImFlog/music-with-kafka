@@ -14,7 +14,7 @@ class Consumer(private val kafkaDataReceiver: KafkaReceiver<String, String>, pri
         kafkaDataReceiver.receive()
                 .doOnNext { it.receiverOffset().acknowledge() }
                 .map {
-                    tryOr(Payload(Action.NOTHING, "nothing")) {
+                    tryOr(Payload(Action.NOTHING, listOf())) {
                         mapper.readValue(it.value(), Payload::class.java)
                     }
                 }
