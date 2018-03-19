@@ -1,8 +1,9 @@
 package fr.ippon.kafka.streams.serdes.pojos;
 
-import fr.ippon.kafka.streams.avro.SoundPlayCount;
-
-import java.util.*;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.TreeSet;
 
 public class TopSongs implements Iterable<SoundPlayCount> {
 

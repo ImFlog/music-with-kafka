@@ -1,15 +1,17 @@
 package fr.ippon.kafka.streams.serdes;
 
-import fr.ippon.kafka.streams.avro.SoundPlayCount;
+import fr.ippon.kafka.streams.serdes.pojos.SoundPlayCount;
 import fr.ippon.kafka.streams.serdes.pojos.TopSongs;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class TopSongSerde implements Serde<TopSongs> {
     @Override
