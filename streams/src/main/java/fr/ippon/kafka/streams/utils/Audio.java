@@ -3,9 +3,9 @@ package fr.ippon.kafka.streams.utils;
 import fr.ippon.kafka.streams.serdes.pojos.TwitterStatus;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
+import static java.util.stream.Collectors.toMap;
 
 public class Audio {
 
@@ -14,19 +14,14 @@ public class Audio {
      * The string will be used to split tweets.
      */
     public static Map<String, Integer> retrieveAvailableCategories() {
-        Map<String, Integer> categoriesAndCount = new HashMap<>();
         File[] filesList = new File("../audio/").listFiles();
-        if (filesList != null) {
-            Arrays.stream(filesList).forEach(f -> {
-                if (f.isDirectory()) {
-                    categoriesAndCount.put(f.getName(), countSubAudioFiles(f));
-                }
-            });
-        }
-        return categoriesAndCount;
+        return Optional
+                .ofNullable(filesList)
+                .map(fileList -> Arrays.stream(fileList).filter(File::isDirectory).collect(toMap(File::getName, Audio::countSubAudioFiles)))
+                .orElse(Collections.emptyMap());
     }
 
-    public static Integer countSubAudioFiles(File file) {
+    private static Integer countSubAudioFiles(File file) {
         File[] subFiles = file.listFiles();
         if (subFiles == null) {
             return 0;
@@ -42,19 +37,18 @@ public class Audio {
      * @return The category key if found. Null if not
      */
     public static String findCategory(TwitterStatus value, Map<String, Integer> categories) {
-        for (Map.Entry<String, Integer> category : categories.entrySet()) {
-            if (matchCategory(category, value)) {
-                return category.getKey();
-            }
-        }
-        return null;
+        return categories.entrySet().stream()
+                .filter(entry -> matchCategory(entry, value))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
      * Check if it matches a category.
      * "_" and "-" are matched as space too.
      */
-    public static boolean matchCategory(Map.Entry<String, Integer> category, TwitterStatus value) {
+    private static boolean matchCategory(Map.Entry<String, Integer> category, TwitterStatus value) {
         String tweetText = value.getText().toLowerCase();
         return tweetText.contains(category.getKey()) ||
                 tweetText.contains(category.getKey()

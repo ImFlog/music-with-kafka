@@ -15,6 +15,7 @@ public class Const {
     public static final String TWEET_PER_USER = "tweetPerUser";
     public static final String TWEET_PER_CATEGORY = "tweetPerCategory";
     public static final String CHART_PER_CATEGORY = "chartPerCategory";
+    public static final String TOP_SONG = "topSong";
 
     private Const() {
     }

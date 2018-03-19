@@ -1,0 +1,87 @@
+{
+  "namespace": "fr.ippon.kafka.streams.avro",
+  "type": "record",
+  "name": "TwitterUserAvro",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "screenName",
+      "type": "string"
+    },
+    {
+      "name": "location",
+      "type": "string"
+    },
+    {
+      "name": "description",
+      "type": "string"
+    },
+    {
+      "name": "contributorsEnabled",
+      "type": "boolean"
+    },
+    {
+      "name": "profileImageUrl",
+      "type": "string"
+    },
+    {
+      "name": "defaultProfileImage",
+      "type": "boolean"
+    },
+    {
+      "name": "URL",
+      "type": "string"
+    },
+    {
+      "name": "followersCount",
+      "type": "int"
+    },
+    {
+      "name": "friendsCount",
+      "type": "int"
+    },
+    {
+      "name": "favouritesCount",
+      "type": "int"
+    },
+    {
+      "name": "utcOffset",
+      "type": "int"
+    },
+    {
+      "name": "lang",
+      "type": "string"
+    },
+    {
+      "name": "statusesCount",
+      "type": "int"
+    },
+    {
+      "name": "geoEnabled",
+      "type": "boolean"
+    },
+    {
+      "name": "verified",
+      "type": "boolean"
+    },
+    {
+      "name": "translator",
+      "type": "boolean"
+    },
+    {
+      "name": "listedCount",
+      "type": "int"
+    },
+    {
+      "name": "followRequestSent",
+      "type": "boolean"
+    }
+  ]
+}

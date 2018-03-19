@@ -4,11 +4,15 @@ buildscript {
 	}
 	repositories {
 		mavenCentral()
+		jcenter()
 	}
 	dependencies {
 		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath "com.commercehub.gradle.plugin:gradle-avro-plugin:0.14.0"
 	}
 }
+
+apply plugin: "com.commercehub.gradle.plugin.avro"
 
 apply plugin: 'java'
 apply plugin: 'org.springframework.boot'
@@ -20,6 +24,14 @@ sourceCompatibility = 1.8
 
 repositories {
 	mavenCentral()
+	jcenter()
+	maven() {
+		url "http://packages.confluent.io/maven/"
+	}
+}
+
+configurations.all {
+	exclude group: 'org.slf4j', module: 'slf4j-log4j12'
 }
 
 
@@ -27,5 +39,8 @@ dependencies {
 	compile('org.springframework.boot:spring-boot-starter-actuator')
 	compile('org.springframework.boot:spring-boot-starter-web')
 	compile('org.apache.kafka:kafka-streams:1.0.1')
+	compile "io.confluent:kafka-avro-serializer:3.3.0"
+	compile "io.confluent:kafka-streams-avro-serde:3.3.0"
+	compile "org.apache.avro:avro:1.8.2"
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }

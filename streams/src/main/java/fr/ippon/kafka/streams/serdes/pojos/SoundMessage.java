@@ -1,14 +1,16 @@
 package fr.ippon.kafka.streams.serdes.pojos;
 
+import java.util.List;
+
 public class SoundMessage {
     private String action = "PLAY";
-    private String path;
+    private List<String> sounds;
 
     public SoundMessage() {
     }
 
-    public SoundMessage(String path) {
-        this.path = path;
+    public SoundMessage(List<String> sounds) {
+        this.sounds = sounds;
     }
 
     public String getAction() {
@@ -19,11 +21,11 @@ public class SoundMessage {
         this.action = action;
     }
 
-    public String getPath() {
-        return path;
+    public List<String> getSounds() {
+        return sounds;
     }
 
-    public void setPath(String path) {
-        this.path = path;
+    public void setSounds(List<String> sounds) {
+        this.sounds = sounds;
     }
 }

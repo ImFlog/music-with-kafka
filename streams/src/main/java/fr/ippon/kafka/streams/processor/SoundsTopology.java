@@ -1,36 +1,33 @@
 package fr.ippon.kafka.streams.processor;
 
+import fr.ippon.kafka.streams.avro.SoundPlayCount;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
+import fr.ippon.kafka.streams.serdes.WindowedSerde;
 import fr.ippon.kafka.streams.serdes.pojos.SoundMessage;
+import fr.ippon.kafka.streams.serdes.TopSongSerde;
+import fr.ippon.kafka.streams.serdes.pojos.TopSongs;
 import fr.ippon.kafka.streams.serdes.pojos.TwitterStatus;
 import fr.ippon.kafka.streams.utils.Audio;
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.streams.Consumed;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.kstream.Serialized;
-import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.StreamSupport;
 
-import static fr.ippon.kafka.streams.utils.Const.SOUNDS_TOPIC;
-import static fr.ippon.kafka.streams.utils.Const.TWEET_PER_CATEGORY;
-import static fr.ippon.kafka.streams.utils.Const.TWITTER_TOPIC;
-import static fr.ippon.kafka.streams.utils.Const.WINDOWING_TIME;
+import static fr.ippon.kafka.streams.utils.Const.*;
+import static java.util.stream.Collectors.toList;
 
 @Component
 /**
@@ -42,34 +39,90 @@ public class SoundsTopology implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+
         // Create an instance of StreamsConfig from the Properties instance
         StreamsConfig config = new StreamsConfig(getProperties());
         StreamsBuilder streamsBuilder = new StreamsBuilder();
+
+        Random random = new Random();
 
         // Define custom serdes
         Map<String, Object> serdeProps = new HashMap<>();
         Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
         Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
-
         Map<String, Integer> categories = Audio.retrieveAvailableCategories();
-        streamsBuilder
-                .stream(TWITTER_TOPIC, Consumed.with(Serdes.String(), twitterStatusSerde))
+        TopSongSerde topSongSerde = new TopSongSerde();
+        final Serde<Windowed<String>> windowedSerde = new WindowedSerde<>(Serdes.String());
+
+        final Map<String, String> serdeConfig = Collections.singletonMap(
+                AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+                "http://localhost:8081"
+        );
+
+        final SpecificAvroSerde<SoundPlayCount> soundPlayCountSerde = new SpecificAvroSerde<>();
+        soundPlayCountSerde.configure(serdeConfig, false);
+
+
+        final KStream<String, TwitterStatus> playEvent = streamsBuilder
+                .stream(TWITTER_TOPIC, Consumed.with(Serdes.String(), twitterStatusSerde));
+
+
+
+        KTable<Windowed<String>, Long> songPlayCount = playEvent
                 // group by categories
-                .groupBy((key, value) -> Audio.findCategory(value, categories),
-                        Serialized.with(Serdes.String(), twitterStatusSerde))
+                .groupBy((key, value) -> Audio.findCategory(value, categories), Serialized.with(Serdes.String(), twitterStatusSerde))
                 .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME))) // Tumbling windowing
                 .count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(TWEET_PER_CATEGORY)
                         .withKeySerde(Serdes.String())
-                        .withValueSerde(Serdes.Long()))
-                // TODO : add aggregation
+                        .withValueSerde(Serdes.Long()));
+
+
+        KTable<Windowed<String>, TopSongs> songsKTable = songPlayCount
+                .groupBy(
+                        (windowedCategories, count) -> {
+                            Windowed<String> windowed = new Windowed<>("TOPS", windowedCategories.window());
+                            return KeyValue.pair(windowed, new SoundPlayCount(windowedCategories.key(), count));
+                        },
+                        Serialized.with(windowedSerde, soundPlayCountSerde)
+                )
+                .aggregate(
+                        TopSongs::new,
+                        //add sound to treeset order by vote
+                        (key, value, aggregate) -> {
+                            aggregate.add(value);
+                            return aggregate;
+                        },
+                        (key, value, aggregate) -> {
+                            aggregate.remove(value);
+                            return aggregate;
+                        },
+                        Materialized.<Windowed<String>, TopSongs, KeyValueStore<Bytes, byte[]>>as(TOP_SONG)
+                                .withKeySerde(windowedSerde)
+                                .withValueSerde(topSongSerde)
+                );
+
+
+        //We will retrieve top N songs from aggregate results
+        KTable<Windowed<String>, SoundMessage> topNSounds = songsKTable
+                .mapValues(topSongs -> {
+                    List<String> paths = StreamSupport
+                            .stream(topSongs.spliterator(), false)
+                            .limit(5)
+                            .map(SoundPlayCount::getName)
+                            .map(s -> String.format("%s/%s%d.ogg", s, s, random.nextInt(categories.get(s)) + 1))
+                            .collect(toList());
+                    return new SoundMessage(paths);
+                });
+
+
+        topNSounds
                 .toStream()
-                .map((windowedKey, value) ->
-                        new KeyValue<>(windowedKey.key() + "@" + windowedKey.window().start() + "->" + windowedKey.window().end(),
-                                new SoundMessage(String.format("%s/%s%d.ogg",
-                                        windowedKey.key(),
-                                        windowedKey.key(),
-                                        value % categories.get(windowedKey.key())))))
+                .map((windowedKey, message) -> {
+                    String key = windowedKey.key() + " @ " + windowedKey.window().start() + " -> " + windowedKey.window().end();
+                    return KeyValue.pair(key, message);
+                })
                 .to(SOUNDS_TOPIC, Produced.with(Serdes.String(), soundMessageSerde));
+
 
         streams = new KafkaStreams(streamsBuilder.build(), config);
         // Clean local store between runs

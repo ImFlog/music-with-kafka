@@ -1,0 +1,8 @@
+{"namespace": "fr.ippon.kafka.streams.avro",
+ "type": "record",
+ "name": "SoundPlayCount",
+ "fields": [
+     {"name": "name", "type": "string"},
+     {"name": "count", "type": "long"}
+ ]
+}

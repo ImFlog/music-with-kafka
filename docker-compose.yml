@@ -23,9 +23,21 @@ services:
     extra_hosts:
       - "moby:127.0.0.1"
 
-  streamer:
+  schema_registry:
+    image: confluentinc/cp-schema-registry
+    network_mode: host
+    depends_on:
+      - zookeeper
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema_registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'localhost:2181'
+
+  emitter:
     build:
-      context: ./streamer
+      context: ./emitter
     network_mode: "host"
     depends_on:
       - zookeeper

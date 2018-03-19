@@ -1,0 +1,19 @@
+{
+  "namespace": "fr.ippon.kafka.streams.avro",
+  "type": "record",
+  "name": "Hashtag",
+  "fields": [
+    {
+      "name": "text",
+      "type": "string"
+    },
+    {
+      "name": "start",
+      "type": "int"
+    },
+    {
+      "name": "end",
+      "type": "int"
+    }
+  ]
+}
