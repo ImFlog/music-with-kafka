@@ -1,7 +1,6 @@
 package fr.ippon.kafka.streams.processor;
 
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
-import fr.ippon.kafka.streams.serdes.TopSongSerde;
 import fr.ippon.kafka.streams.serdes.pojos.SoundMessage;
 import fr.ippon.kafka.streams.serdes.pojos.SoundPlayCount;
 import fr.ippon.kafka.streams.serdes.pojos.TopSongs;
@@ -20,11 +19,11 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Serialized;
 import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.kstream.Windowed;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.WindowStore;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -40,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
 import static fr.ippon.kafka.streams.utils.Const.SOUNDS_TOPIC;
+import static fr.ippon.kafka.streams.utils.Const.TOP_SONG;
 import static fr.ippon.kafka.streams.utils.Const.TWEET_PER_CATEGORY;
 import static fr.ippon.kafka.streams.utils.Const.TWITTER_TOPIC;
 import static fr.ippon.kafka.streams.utils.Const.WINDOWING_TIME;
@@ -66,9 +66,9 @@ public class SoundsTopology implements CommandLineRunner {
         Map<String, Object> serdeProps = new HashMap<>();
         Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
         Serde<SoundPlayCount> soundPlayCountSerde = SerdeFactory.createSerde(SoundPlayCount.class, serdeProps);
+        Serde<TopSongs> topSongSerde = SerdeFactory.createSerde(TopSongs.class, serdeProps);
         Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
         Map<String, Integer> categories = Audio.retrieveAvailableCategories();
-        TopSongSerde topSongSerde = new TopSongSerde();
 
         final Map<String, String> serdeConfig = Collections.singletonMap(
                 AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
@@ -83,7 +83,6 @@ public class SoundsTopology implements CommandLineRunner {
                 .groupBy((key, value) -> Audio.findCategory(value, categories), Serialized.with(Serdes.String(), twitterStatusSerde))
                 .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME))) // Tumbling windowing
                 .count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(TWEET_PER_CATEGORY)
-                        .withKeySerde(Serdes.String())
                         .withValueSerde(Serdes.Long()));
 
         KTable<String, TopSongs> songsKTable = songPlayCount
@@ -99,7 +98,8 @@ public class SoundsTopology implements CommandLineRunner {
                             aggregate.remove(value);
                             return aggregate;
                         },
-                        Materialized.with(Serdes.String(), topSongSerde));
+                        Materialized.<String, TopSongs, KeyValueStore<Bytes, byte[]>>as(TOP_SONG)
+                                .withValueSerde(topSongSerde));
 
         //We will retrieve top N songs from aggregate results
         KTable<String, SoundMessage> topNSounds = songsKTable
