@@ -15,8 +15,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.WindowStore;
+import org.apache.kafka.streams.state.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
 import static fr.ippon.kafka.streams.utils.Const.*;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 @Component
@@ -72,6 +72,7 @@ public class SoundsTopology implements CommandLineRunner {
                 .count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(TWEET_PER_CATEGORY)
                         .withValueSerde(Serdes.Long()));
 
+
         KTable<Windowed<String>, TopSongs> songsKTable = songPlayCount
                 .groupBy((windowedCategories, count) -> {
                             //we have to use a windowed key to run aggregation on timed windows
@@ -91,6 +92,7 @@ public class SoundsTopology implements CommandLineRunner {
                         Materialized.<Windowed<String>, TopSongs, KeyValueStore<Bytes, byte[]>>as(TOP_SONG)
                                 .withValueSerde(topSongSerde));
 
+
         //We will retrieve top N songs from aggregate results
         KTable<Windowed<String>, SoundMessage> topNSounds = songsKTable
                 .mapValues(topSongs -> {
@@ -109,9 +111,16 @@ public class SoundsTopology implements CommandLineRunner {
                 .to(SOUNDS_TOPIC, Produced.with(stringSerde, soundMessageSerde));
 
         streams = new KafkaStreams(streamsBuilder.build(), config);
+
         // Clean local store between runs
         streams.cleanUp();
         streams.start();
+
+
+    }
+
+    public ReadOnlyKeyValueStore<Windowed<String>, TopSongs> getTopSongs() {
+        return streams.store(TOP_SONG, QueryableStoreTypes.keyValueStore());
     }
 
     @PreDestroy
