@@ -1,21 +1,16 @@
 package fr.ippon.kafka.streams.serdes.pojos;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.TreeSet;
 
+@JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public class TopSongs implements Iterable<SoundPlayCount> {
 
-    private final Comparator<SoundPlayCount> comparator = (o1, o2) -> {
-        int results = o2.getCount().compareTo(o1.getCount());
-        if (results != 0) {
-            return results;
-        }
-        return o1.getName().compareTo(o2.getName());
-    };
-
-    private final TreeSet<SoundPlayCount> songset = new TreeSet<>(comparator);
+    private final TreeSet<SoundPlayCount> songset = new TreeSet<>();
 
     public void add(final SoundPlayCount soundPlayCount) {
         songset.add(soundPlayCount);
@@ -34,4 +29,9 @@ public class TopSongs implements Iterable<SoundPlayCount> {
     public Iterator<SoundPlayCount> iterator() {
         return songset.iterator();
     }
+
+    public Iterator<SoundPlayCount> getSongset() {
+        return songset.iterator();
+    }
+
 }

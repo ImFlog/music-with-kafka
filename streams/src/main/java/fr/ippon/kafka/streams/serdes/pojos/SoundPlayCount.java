@@ -1,6 +1,6 @@
 package fr.ippon.kafka.streams.serdes.pojos;
 
-public class SoundPlayCount {
+public class SoundPlayCount implements Comparable<SoundPlayCount> {
 
     private String name;
     private Long count;
@@ -27,5 +27,14 @@ public class SoundPlayCount {
 
     public void setCount(Long count) {
         this.count = count;
+    }
+
+    @Override
+    public int compareTo(SoundPlayCount o) {
+        int results = o.getCount().compareTo(getCount());
+        if (results != 0) {
+            return results;
+        }
+        return getName().compareTo(o.getName());
     }
 }
