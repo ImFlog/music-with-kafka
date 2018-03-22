@@ -6,4 +6,14 @@ export default class MusicChart {
       this.sound = sound;
       this.count = count;
     }
+
+    compare(chart: MusicChart): number {
+      if (this.count < chart.count) {
+        return 1;
+      }
+      if (this.count > chart.count) {
+        return -1;
+      }
+      return 0;
+    }
   }

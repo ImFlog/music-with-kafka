@@ -13,10 +13,10 @@ export default class TwitterUser {
 
   compare(user: TwitterUser): number {
     if (this.tweetCount < user.tweetCount) {
-      return -1;
+      return 1;
     }
     if (this.tweetCount > user.tweetCount) {
-      return 1;
+      return -1;
     }
     return 0;
   }
