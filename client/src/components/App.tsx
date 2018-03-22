@@ -6,24 +6,12 @@ import MusicEvent from '../beans/MusicEvent';
 import TwitterUserList from './TwitterUserList';
 import TwitterUserService from "../services/TwitterUserService";
 import TwitterUser from "../beans/TwitterUser";
+import MusicCharts from "./MusicCharts";
 
 export interface AppProps { }
 
-const sse = new EventSource('http://localhost:8090/stream');
-
-sse.onopen = () => {
-    console.log("SSE oppen");
-}
-
 class App extends React.Component<AppProps, undefined> {
     count = 0;
-
-  componentDidMount() {
-    sse.onmessage = (event) => {
-      const musicEvent: MusicEvent = JSON.parse(event.data);
-      MusicPlayer.processMusic(musicEvent)
-    }
-  }
 
   private playMusic(evt: React.KeyboardEvent<HTMLInputElement>){
     if (evt.which === 13){
@@ -49,6 +37,7 @@ class App extends React.Component<AppProps, undefined> {
         <br />
         Twitter user <input type='text' onKeyPress={this.addTwitterUser.bind(this)} />
         <TwitterUserList twitterUsers={TwitterUserService.users}/>
+        <MusicCharts musicCharts={[]} />
       </div>
     );
   }

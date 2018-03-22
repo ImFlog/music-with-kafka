@@ -1,4 +1,4 @@
-export default class Charts {
+export default class MusicChart {
     sound: string;
     count: number;
   
