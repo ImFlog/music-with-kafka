@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.TreeSet;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public class TopSongs implements Iterable<SoundPlayCount> {
@@ -32,6 +34,10 @@ public class TopSongs implements Iterable<SoundPlayCount> {
 
     public Iterator<SoundPlayCount> getSongset() {
         return songset.iterator();
+    }
+
+    public Stream<SoundPlayCount> toStream() {
+        return StreamSupport.stream(songset.spliterator(), false);
     }
 
 }

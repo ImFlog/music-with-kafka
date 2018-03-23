@@ -1,35 +1,31 @@
 package fr.ippon.kafka.streams.processor;
 
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
+import fr.ippon.kafka.streams.serdes.WindowedSerde;
+import fr.ippon.kafka.streams.serdes.pojos.Chart;
+import fr.ippon.kafka.streams.serdes.pojos.ChartMessage;
+import fr.ippon.kafka.streams.serdes.pojos.Charts;
 import fr.ippon.kafka.streams.serdes.pojos.TwitterStatus;
 import fr.ippon.kafka.streams.utils.Audio;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.streams.Consumed;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.kstream.Serialized;
-import org.apache.kafka.streams.kstream.TimeWindows;
-import org.apache.kafka.streams.state.WindowStore;
+import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-import static fr.ippon.kafka.streams.utils.Const.CHARTS_TOPIC;
-import static fr.ippon.kafka.streams.utils.Const.CHART_PER_CATEGORY;
-import static fr.ippon.kafka.streams.utils.Const.TWITTER_TOPIC;
-import static fr.ippon.kafka.streams.utils.Const.WINDOWING_TIME;
+import static fr.ippon.kafka.streams.utils.Const.*;
 
 @Component
 /**
@@ -49,6 +45,11 @@ public class ChartsTopology implements CommandLineRunner {
         // Define custom serdes
         Map<String, Object> serdeProps = new HashMap<>();
         Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
+        Serde<Chart> chartSerde = SerdeFactory.createSerde(Chart.class, serdeProps);
+        Serde<Charts> chartsSerde = SerdeFactory.createSerde(Charts.class, serdeProps);
+        Serde<ChartMessage> messageSerde = SerdeFactory.createSerde(ChartMessage.class, serdeProps);
+        final Serde<Windowed<String>> windowedSerde = new WindowedSerde<>(Serdes.String());
+
 
         Map<String, Integer> categories = Audio.retrieveAvailableCategories();
         streamsBuilder
@@ -60,15 +61,49 @@ public class ChartsTopology implements CommandLineRunner {
                 .count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(CHART_PER_CATEGORY)
                         .withKeySerde(Serdes.String())
                         .withValueSerde(Serdes.Long()))
+
+                .groupBy((k, v) -> {
+                    Windowed<String> windowed = new Windowed<>("CHARTS", k.window());
+                    return KeyValue.pair(windowed, new Chart(k.key(), v));
+                }, Serialized.with(windowedSerde, chartSerde))
+
+                .aggregate(
+                        Charts::new,
+                        (key, value, aggregate) -> {
+                            aggregate.add(value);
+                            return aggregate;
+                        },
+                        (key, value, aggregate) -> {
+                            aggregate.remove(value);
+                            return aggregate;
+                        },
+                        Materialized.<Windowed<String>, Charts, KeyValueStore<Bytes, byte[]>>as("chartsSong")
+                                .withValueSerde(chartsSerde)
+                )
+
+                .mapValues(charts -> {
+                    List<Chart> list = charts.toStream()
+                            .map(c -> new Chart(c.getSound(), c.getCount()))
+                            .collect(Collectors.toList());
+                    return new ChartMessage(list);
+                })
+
                 .toStream()
-                .map((windowedKey, value) ->
-                        new KeyValue<>(windowedKey.key() + "@" + windowedKey.window().start() + "->" + windowedKey.window().end(), value))
-                .to(CHARTS_TOPIC, Produced.with(Serdes.String(), Serdes.Long()));
+                .map((windowedKey, value) -> KeyValue.pair(windowedKey.key(), value))
+                .to(CHARTS_TOPIC, Produced.with(Serdes.String(), messageSerde));
 
         streams = new KafkaStreams(streamsBuilder.build(), config);
         // Clean local store between runs
         streams.cleanUp();
         streams.start();
+    }
+
+    public ReadOnlyWindowStore<String, Long> chartsStore() {
+        return streams.store(CHART_PER_CATEGORY, QueryableStoreTypes.windowStore());
+    }
+
+    public ReadOnlyKeyValueStore<Windowed<String>, Charts> chartsStoreWindowed() {
+        return streams.store("chartsSong", QueryableStoreTypes.keyValueStore());
     }
 
     @PreDestroy

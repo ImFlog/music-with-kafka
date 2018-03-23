@@ -96,8 +96,8 @@ public class SoundsTopology implements CommandLineRunner {
         //We will retrieve top N songs from aggregate results
         KTable<Windowed<String>, SoundMessage> topNSounds = songsKTable
                 .mapValues(topSongs -> {
-                    List<String> paths = StreamSupport
-                            .stream(topSongs.spliterator(), false)
+                    List<String> paths = topSongs
+                            .toStream()
                             .limit(5)
                             .map(SoundPlayCount::getName)
                             .map(s -> String.format("%s/%s%d.ogg", s, s, random.nextInt(categories.get(s)) + 1))
