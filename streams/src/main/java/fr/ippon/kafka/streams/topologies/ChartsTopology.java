@@ -32,48 +32,22 @@ public class ChartsTopology implements CommandLineRunner {
 
     private KafkaStreams streams;
 
-    /**
-     * Init stream properties.
-     *
-     * @return the created stream settings.
-     */
-    private static Properties getProperties() {
-        Properties settings = new Properties();
-        // Application ID, used for consumer groups
-        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "ChartsTopology");
-        // Kafka bootstrap server (broker to talk to)
-        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+    // Define custom serdes
+    private final Map<String, Object> serdeProps = new HashMap<>();
+    private final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
+    private final Serde<Chart> chartSerde = SerdeFactory.createSerde(Chart.class, serdeProps);
+    private final Serde<Charts> chartsSerde = SerdeFactory.createSerde(Charts.class, serdeProps);
+    private final Serde<ChartMessage> messageSerde = SerdeFactory.createSerde(ChartMessage.class, serdeProps);
+    private final Serde<String> stringSerde = Serdes.String();
+    private final Serde<Windowed<String>> windowedSerde = new WindowedSerde<>(stringSerde);
+    private final Serde<Long> longSerde = Serdes.Long();
 
-        // default serdes for serializing and deserializing key and value from and to streams
-        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-
-        // We want the charts to be updated every 5 seconds
-        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
-
-        // Enable exactly once
-//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
-
-        // We can also set Consumer properties
-        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        return settings;
-    }
 
     @Override
     public void run(String... args) {
         // Create an instance of StreamsConfig from the Properties instance
-        StreamsConfig config = new StreamsConfig(getProperties());
+        StreamsConfig config = kStreamConfig();
         StreamsBuilder streamsBuilder = new StreamsBuilder();
-
-        // Define custom serdes
-        final Map<String, Object> serdeProps = new HashMap<>();
-        final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
-        final Serde<Chart> chartSerde = SerdeFactory.createSerde(Chart.class, serdeProps);
-        final Serde<Charts> chartsSerde = SerdeFactory.createSerde(Charts.class, serdeProps);
-        final Serde<ChartMessage> messageSerde = SerdeFactory.createSerde(ChartMessage.class, serdeProps);
-        final Serde<String> stringSerde = Serdes.String();
-        final Serde<Windowed<String>> windowedSerde = new WindowedSerde<>(stringSerde);
-        final Serde<Long> longSerde = Serdes.Long();
 
         Categories categories = Audio.retrieveAvailableCategories();
 
@@ -125,17 +99,9 @@ public class ChartsTopology implements CommandLineRunner {
         streams.start();
     }
 
-    private ReadOnlyWindowStore<String, Long> chartsPerCategory() {
-        return streams.store(CHART_PER_CATEGORY, QueryableStoreTypes.windowStore());
-    }
-
-    public Stream<KeyValue<Long, Long>> getChartsCountPerCategories(String category) {
-        WindowStoreIterator<Long> it = chartsPerCategory().fetch(category, 0, System.currentTimeMillis());
-        return Commons.iteratorToStream(it);
-    }
-
-    private ReadOnlyKeyValueStore<Windowed<String>, Charts> chartsSong() {
-        return streams.store("chartsSong", QueryableStoreTypes.keyValueStore());
+    @PreDestroy
+    public void destroy() {
+        streams.close();
     }
 
     public Stream<Chart> getLastChartSong() {
@@ -146,8 +112,44 @@ public class ChartsTopology implements CommandLineRunner {
                 .toStream();
     }
 
-    @PreDestroy
-    public void destroy() {
-        streams.close();
+    public Stream<KeyValue<Long, Long>> getChartsCountPerCategories(String category) {
+        WindowStoreIterator<Long> it = chartsPerCategory().fetch(category, 0, System.currentTimeMillis());
+        return Commons.iteratorToStream(it);
     }
+
+    private ReadOnlyWindowStore<String, Long> chartsPerCategory() {
+        return streams.store(CHART_PER_CATEGORY, QueryableStoreTypes.windowStore());
+    }
+
+    private ReadOnlyKeyValueStore<Windowed<String>, Charts> chartsSong() {
+        return streams.store("chartsSong", QueryableStoreTypes.keyValueStore());
+    }
+
+    /**
+     * Init stream properties.
+     *
+     * @return the created stream settings.
+     */
+    private static StreamsConfig kStreamConfig() {
+        Properties settings = new Properties();
+        // Application ID, used for consumer groups
+        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "ChartsTopology");
+        // Kafka bootstrap server (broker to talk to)
+        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+
+        // default serdes for serializing and deserializing key and value from and to streams
+        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+
+        // We want the charts to be updated every 5 seconds
+        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
+
+        // Enable exactly once
+//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+
+        // We can also set Consumer properties
+        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        return new StreamsConfig(settings);
+    }
+
 }

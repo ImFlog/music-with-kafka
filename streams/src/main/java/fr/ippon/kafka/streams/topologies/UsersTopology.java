@@ -34,54 +34,29 @@ public class UsersTopology implements CommandLineRunner {
     private static final String ALL_USERS = "all-users";
     private KafkaStreams streams;
 
-    /**
-     * Init stream properties.
-     *
-     * @return the created stream settings.
-     */
-    private static Properties getProperties() {
-        Properties settings = new Properties();
-        // Application ID, used for consumer groups
-        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "UsersTopology");
-        // Kafka bootstrap server (broker to talk to)
-        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+    // Define custom serdes
+    private final Map<String, Object> serdeProps = new HashMap<>();
+    private final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
+    private final Serde<TwitterUserInfo> twitterUserInfoSerde = SerdeFactory.createSerde(TwitterUserInfo.class, serdeProps);
+    private final Serde<String> stringSerde = Serdes.String();
+    private final Serde<Long> longSerde = Serdes.Long();
 
-        // default serdes for serializing and deserializing key and value from and to streams
-        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
 
-        // We want the users to be updated every 5 seconds
-        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
-
-        // Enable exactly once
-//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
-
-        // We can also set Consumer properties
-        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        return settings;
-    }
 
     public void run(String... args) {
         // Create an instance of StreamsConfig from the Properties instance
-        StreamsConfig config = new StreamsConfig(getProperties());
-        StreamsBuilder builder = new StreamsBuilder();
-
-        // Define custom serdes
-        final Map<String, Object> serdeProps = new HashMap<>();
-        final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
-        final Serde<TwitterUserInfo> twitterUserInfoSerde = SerdeFactory.createSerde(TwitterUserInfo.class, serdeProps);
-        final Serde<String> stringSerde = Serdes.String();
-        final Serde<Long> longSerde = Serdes.Long();
+        final StreamsConfig config = kStreamConfig();
+        final StreamsBuilder builder = new StreamsBuilder();
 
         // Simply read the stream
-        KStream<String, TwitterStatus> twitterStream = builder.stream(
+        final KStream<String, TwitterStatus> twitterStream = builder.stream(
                 TWITTER_TOPIC,
                 Consumed.with(stringSerde, twitterStatusSerde)
         );
         twitterStream.print(Printed.toSysOut());
 
         //Construct a state store to hold all the users in the store
-        KTable<String, TwitterUserInfo> usersTable = builder
+        final KTable<String, TwitterUserInfo> usersTable = builder
                 .table(
                         USER_FEED,
                         Consumed.with(stringSerde, twitterUserInfoSerde),
@@ -100,7 +75,7 @@ public class UsersTopology implements CommandLineRunner {
 
 
         //Join the tweet streams with our user state store to return a user with his tweets count
-        KStream<String, TwitterUserInfo> joinedStream = twitterStream
+        final KStream<String, TwitterUserInfo> joinedStream = twitterStream
                 .groupBy((key, value) -> value.getUser().getScreenName(), Serialized.with(stringSerde, twitterStatusSerde))
                 .count(Materialized.as(TWEET_PER_USER))
                 .toStream()
@@ -124,14 +99,6 @@ public class UsersTopology implements CommandLineRunner {
         streams.start();
     }
 
-    private ReadOnlyKeyValueStore<String, Long> getTweetCountPerUser() {
-        return streams.store(TWEET_PER_USER, QueryableStoreTypes.keyValueStore());
-    }
-
-    private ReadOnlyKeyValueStore<String, TwitterUserInfo> getUserFeedStore() {
-        return streams.store(ALL_USERS, QueryableStoreTypes.keyValueStore());
-    }
-
     public Stream<TwitterUserInfo> getTwitterUserInfoStream() {
         return Commons.iteratorToStream(getUserFeedStore().all()).map(kv -> kv.value);
     }
@@ -144,4 +111,40 @@ public class UsersTopology implements CommandLineRunner {
     public void destroy() {
         streams.close();
     }
+
+    private ReadOnlyKeyValueStore<String, Long> getTweetCountPerUser() {
+        return streams.store(TWEET_PER_USER, QueryableStoreTypes.keyValueStore());
+    }
+
+    private ReadOnlyKeyValueStore<String, TwitterUserInfo> getUserFeedStore() {
+        return streams.store(ALL_USERS, QueryableStoreTypes.keyValueStore());
+    }
+
+    /**
+     * Init stream properties.
+     *
+     * @return the created stream settings.
+     */
+    private static StreamsConfig kStreamConfig() {
+        Properties settings = new Properties();
+        // Application ID, used for consumer groups
+        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "UsersTopology");
+        // Kafka bootstrap server (broker to talk to)
+        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+
+        // default serdes for serializing and deserializing key and value from and to streams
+        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+
+        // We want the users to be updated every 5 seconds
+        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
+
+        // Enable exactly once
+//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+
+        // We can also set Consumer properties
+        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        return new StreamsConfig(settings);
+    }
+
 }
