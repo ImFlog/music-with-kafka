@@ -1,8 +1,9 @@
-package fr.ippon.kafka.streams.processor;
+package fr.ippon.kafka.streams.topologies;
 
+import fr.ippon.kafka.streams.domains.TwitterStatus;
+import fr.ippon.kafka.streams.domains.TwitterUserInfo;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
-import fr.ippon.kafka.streams.serdes.pojos.TwitterStatus;
-import fr.ippon.kafka.streams.serdes.pojos.TwitterUserInfo;
+import fr.ippon.kafka.streams.utils.Commons;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -17,6 +18,7 @@ import javax.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 import static fr.ippon.kafka.streams.utils.Const.*;
 
@@ -31,6 +33,33 @@ public class UsersTopology implements CommandLineRunner {
     private static final String USER_FEED = "user-feed";
     private static final String ALL_USERS = "all-users";
     private KafkaStreams streams;
+
+    /**
+     * Init stream properties.
+     *
+     * @return the created stream settings.
+     */
+    private static Properties getProperties() {
+        Properties settings = new Properties();
+        // Application ID, used for consumer groups
+        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "UsersTopology");
+        // Kafka bootstrap server (broker to talk to)
+        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+
+        // default serdes for serializing and deserializing key and value from and to streams
+        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+
+        // We want the users to be updated every 5 seconds
+        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
+
+        // Enable exactly once
+//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+
+        // We can also set Consumer properties
+        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        return settings;
+    }
 
     public void run(String... args) {
         // Create an instance of StreamsConfig from the Properties instance
@@ -95,43 +124,24 @@ public class UsersTopology implements CommandLineRunner {
         streams.start();
     }
 
-    public ReadOnlyKeyValueStore<String, Long> getTweetCountPerUser() {
+    private ReadOnlyKeyValueStore<String, Long> getTweetCountPerUser() {
         return streams.store(TWEET_PER_USER, QueryableStoreTypes.keyValueStore());
     }
 
-    public ReadOnlyKeyValueStore<String, TwitterUserInfo> getUserFeedStore() {
+    private ReadOnlyKeyValueStore<String, TwitterUserInfo> getUserFeedStore() {
         return streams.store(ALL_USERS, QueryableStoreTypes.keyValueStore());
+    }
+
+    public Stream<TwitterUserInfo> getTwitterUserInfoStream() {
+        return Commons.iteratorToStream(getUserFeedStore().all()).map(kv -> kv.value);
+    }
+
+    public Stream<KeyValue<String, Long>> getTweetCountStream() {
+        return Commons.iteratorToStream(getTweetCountPerUser().all());
     }
 
     @PreDestroy
     public void destroy() {
         streams.close();
-    }
-
-    /**
-     * Init stream properties.
-     *
-     * @return the created stream settings.
-     */
-    private static Properties getProperties() {
-        Properties settings = new Properties();
-        // Application ID, used for consumer groups
-        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "UsersTopology");
-        // Kafka bootstrap server (broker to talk to)
-        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-
-        // default serdes for serializing and deserializing key and value from and to streams
-        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-
-        // We want the users to be updated every 5 seconds
-        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
-
-        // Enable exactly once
-//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
-
-        // We can also set Consumer properties
-        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        return settings;
     }
 }

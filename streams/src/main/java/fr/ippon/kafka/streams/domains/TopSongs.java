@@ -1,8 +1,7 @@
-package fr.ippon.kafka.streams.serdes.pojos;
+package fr.ippon.kafka.streams.domains;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.TreeSet;

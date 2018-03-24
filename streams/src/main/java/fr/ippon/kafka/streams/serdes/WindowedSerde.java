@@ -17,7 +17,8 @@ public class WindowedSerde<T> implements Serde<Windowed<T>> {
     public WindowedSerde(Serde<T> serde) {
         inner = Serdes.serdeFrom(
                 new WindowedSerializer<>(serde.serializer()),
-                new WindowedDeserializer<>(serde.deserializer()));
+                new WindowedDeserializer<>(serde.deserializer())
+        );
     }
 
     @Override

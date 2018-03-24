@@ -1,6 +1,6 @@
 package fr.ippon.kafka.streams.utils;
 
-public class Const {
+public final class Const {
 
     public static final Long WINDOWING_TIME = 30L;
 

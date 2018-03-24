@@ -1,19 +1,17 @@
 package fr.ippon.kafka.streams.serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.NoArgsConstructor;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.util.Map;
 
+@NoArgsConstructor
 public class JsonPOJOSerializer<T> implements Serializer<T> {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private Class<T> tClass;
-
-    public JsonPOJOSerializer() {
-
-    }
 
     @SuppressWarnings("unchecked")
     @Override
