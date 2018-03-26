@@ -5,8 +5,6 @@ import MusicLoader from './MusicLoader';
 
 const MAGIC_NUMBER = 4363.900226757;
 
-const sse = new EventSource('http://localhost:8090/stream/sounds');
-
 class MusicPlayer {
   @observable musics: IObservableArray<Music> = observable([]);
   audioCtx: AudioContext;
@@ -15,10 +13,6 @@ class MusicPlayer {
   constructor() {
     this.audioCtx = new AudioContext();
     setInterval(this._soundWorker.bind(this), MAGIC_NUMBER);
-    sse.onmessage = (event) => {
-      const musicEvent: MusicEvent = JSON.parse(event.data);
-      this.processMusic(musicEvent)
-    }
   }
 
   processMusic(musicEvent: MusicEvent) {

@@ -9,6 +9,7 @@ import TwitterUser from "../beans/TwitterUser";
 import MusicCharts from "./MusicCharts";
 import MusicChart from "../beans/MusicChart";
 import MusicChartService from "../services/MusicChartService";
+import MusicChartEvent from "../beans/MusicChartEvent";
 
 const musicCharts: MusicChart[] = [
   new MusicChart("sound1", 12),
@@ -28,6 +29,9 @@ const testUsers: TwitterUser[] = [
   new TwitterUser("garfy", "https://static.boredpanda.com/blog/wp-content/uploads/2014/11/garfi-evil-grumpy-persian-cat-12.jpg", 1)
 ]
 
+const sseSounds = new EventSource('http://localhost:8090/stream/sounds');
+const sseUsers = new EventSource('http://localhost:8090/stream/users');
+const sseCharts = new EventSource('http://localhost:8090/stream/charts');
 
 export interface AppProps { }
 
@@ -38,6 +42,21 @@ class App extends React.Component<AppProps, undefined> {
     // Only for testing
     // MusicChartService.updateCharts(musicCharts);
     testUsers.forEach(user => TwitterUserService.addUser(user));
+
+    sseSounds.onmessage = (event) => {
+      const musicEvent: MusicEvent = JSON.parse(event.data);
+      MusicPlayer.processMusic(musicEvent)
+    }
+
+    sseUsers.onmessage = (event) => {
+      const user: TwitterUser = JSON.parse(event.data);
+      TwitterUserService.addUser(user);
+    }
+
+    sseCharts.onmessage = (event) => {
+      const musicChartEvent: MusicChartEvent = JSON.parse(event.data);
+      MusicChartService.updateCharts(musicChartEvent.charts);
+    }
   }
 
   private playMusic(evt: React.KeyboardEvent<HTMLInputElement>) {
