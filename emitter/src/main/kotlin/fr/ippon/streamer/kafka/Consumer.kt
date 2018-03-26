@@ -22,10 +22,9 @@ class Consumer(
         soundsReceiver
                 .doOnNext { it.receiverOffset().acknowledge() }
                 .map {
-                    payloadToSend = if (previousState.first != it.key()) {
-                        Pair(previousState.second, true)
-                    } else {
-                        Pair("", false)
+                    payloadToSend = when(previousState.first) {
+                        it.key() -> Pair("", false)
+                        else -> Pair(previousState.second, true)
                     }
                     previousState = Pair(it.key(), it.value())
                     payloadToSend

@@ -19,8 +19,8 @@ class Router(val streamHandler: StreamHandler, val interactiveQueries: Interacti
             }
             GET("/users").nest {
                 accept(MediaType.TEXT_EVENT_STREAM, streamHandler::userStream)
-
             }
+            GET("/basic", streamHandler::basicConsumer)
         }
         GET("/tweets", interactiveQueries::getTopTweetsByUsers)
         GET("/users", interactiveQueries::getAllUsersInfo)

@@ -11,7 +11,7 @@ import reactor.core.publisher.Mono
 @Configuration
 class CorsConfiguration : WebFilter {
     override fun filter(ctx: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
-        ctx.response.headers.add("Access-Control-Allow-Origin", "http://127.0.0.1:3000")
+        ctx.response.headers.add("Access-Control-Allow-Origin", "*")
         ctx.response.headers.add("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS")
         ctx.response.headers.add("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range")
         ctx.response.headers.add("Access-Control-Allow-Credentials", "true")
