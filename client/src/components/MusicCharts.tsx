@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Bar, ChartData } from 'react-chartjs-2';
 import MusicChart from '../beans/MusicChart';
 import { observer } from 'mobx-react';
-import { ChartDataSets, ChartData as ChartDataJs, ChartColor } from 'chart.js';
+import { ChartDataSets, ChartData as ChartDataJs, ChartColor, ChartOptions } from 'chart.js';
 
 const defaultColor: ChartColor = 'rgba(255,99,132,0.2)'
 const defaultBorderColor: ChartColor = 'rgba(255,99,132,1)'
@@ -13,6 +13,17 @@ const topBorderColor: ChartColor = 'rgba(105,187,72,1)'
 const defaultDataset: ChartDataSets = {
     label: 'Sounds vote',
     borderWidth: 1
+}
+
+const options: ChartOptions = {
+    scales: {
+        yAxes: [{
+            ticks: {
+                min: 0,
+                max: 10,
+            }
+        }]
+    }
 }
 
 export interface MusicChartsProps {
@@ -28,7 +39,7 @@ export default class MusicCharts extends React.Component<MusicChartsProps, undef
         const backgroundColors: ChartColor[] = new Array<ChartColor>();
         const borderColors: ChartColor[] = new Array<ChartColor>();
         this.props.musicCharts.sort((music1, music2) => music1.compare(music2)).forEach((musicChart, idx) => {
-            if (idx < 3) {
+            if (idx < 5) {
                 backgroundColors.push(topColor);
                 borderColors.push(topBorderColor);
             } else {
@@ -58,6 +69,7 @@ export default class MusicCharts extends React.Component<MusicChartsProps, undef
                     data={data}
                     width={40}
                     height={10}
+                    options={options}
                 />
             </div>
         );

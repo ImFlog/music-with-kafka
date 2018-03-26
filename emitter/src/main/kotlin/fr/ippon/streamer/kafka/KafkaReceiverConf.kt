@@ -31,7 +31,6 @@ class KafkaReceiverConf {
         val options = ReceiverOptions
                 .create<String, String>(props)
                 .subscription(setOf(SOUNDS))
-                .addAssignListener { p -> p.forEach(ReceiverPartition::seekToBeginning) }
         return KafkaReceiver.create(options).receive()
     }
 
@@ -46,7 +45,6 @@ class KafkaReceiverConf {
         val options = ReceiverOptions
                 .create<String, String>(props)
                 .subscription(setOf(CHARTS))
-                .addAssignListener { p -> p.forEach(ReceiverPartition::seekToBeginning) }
         return KafkaReceiver.create(options).receive()
     }
 
@@ -61,7 +59,6 @@ class KafkaReceiverConf {
         val options = ReceiverOptions
                 .create<String, String>(props)
                 .subscription(setOf(USERS))
-                .addAssignListener { p -> p.forEach(ReceiverPartition::seekToBeginning) }
         return KafkaReceiver.create(options).receive()
     }
 

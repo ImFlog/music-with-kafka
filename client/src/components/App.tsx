@@ -41,7 +41,7 @@ class App extends React.Component<AppProps, undefined> {
   componentDidMount() {
     // Only for testing
     // MusicChartService.updateCharts(musicCharts);
-    testUsers.forEach(user => TwitterUserService.addUser(user));
+    // testUsers.forEach(user => TwitterUserService.addUser(user));
 
     sseSounds.onmessage = (event) => {
       const musicEvent: MusicEvent = JSON.parse(event.data);
