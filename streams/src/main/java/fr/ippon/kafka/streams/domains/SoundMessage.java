@@ -11,8 +11,6 @@ import java.util.List;
 @Setter
 public class SoundMessage {
 
-    private String action = "PLAY";
-
     private List<String> sounds;
 
     public SoundMessage(List<String> sounds) {

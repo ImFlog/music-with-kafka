@@ -7,8 +7,18 @@ import fr.ippon.kafka.streams.utils.Commons;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.Consumed;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.Joined;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Printed;
+import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Serialized;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.springframework.boot.CommandLineRunner;
@@ -18,10 +28,11 @@ import javax.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static fr.ippon.kafka.streams.utils.Const.*;
+import static fr.ippon.kafka.streams.utils.Const.TWEET_PER_USER;
+import static fr.ippon.kafka.streams.utils.Const.TWITTER_TOPIC;
+import static fr.ippon.kafka.streams.utils.Const.USERS_TOPIC;
 
 @Component
 
@@ -43,7 +54,6 @@ public class UsersTopology implements CommandLineRunner {
     private final Serde<Long> longSerde = Serdes.Long();
 
 
-
     public void run(String... args) {
         // Create an instance of StreamsConfig from the Properties instance
         final StreamsConfig config = kStreamConfig();
@@ -56,13 +66,6 @@ public class UsersTopology implements CommandLineRunner {
         );
         twitterStream.print(Printed.toSysOut());
 
-        //Construct a state store to hold all the users in the store
-        final KTable<String, TwitterUserInfo> usersTable = builder
-                .table(
-                        USER_FEED,
-                        Consumed.with(stringSerde, twitterUserInfoSerde),
-                        Materialized.as(ALL_USERS)
-                );
 
         //Feed the user store
         twitterStream
@@ -74,6 +77,13 @@ public class UsersTopology implements CommandLineRunner {
                     return KeyValue.pair(v.getUser().getScreenName(), userInfo);
                 }).to(USER_FEED, Produced.with(stringSerde, twitterUserInfoSerde));
 
+        //Construct a state store to hold all the users in the store
+        final KTable<String, TwitterUserInfo> usersTable = builder
+                .table(
+                        USER_FEED,
+                        Consumed.with(stringSerde, twitterUserInfoSerde),
+                        Materialized.as(ALL_USERS)
+                );
 
         //Join the tweet streams with our user state store to return a user with his tweets count
         final KStream<String, TwitterUserInfo> joinedStream = twitterStream
@@ -89,8 +99,7 @@ public class UsersTopology implements CommandLineRunner {
                         Joined.with(stringSerde, longSerde, twitterUserInfoSerde)
                 );
 
-        joinedStream
-                .to(USERS_TOPIC, Produced.with(stringSerde, twitterUserInfoSerde));
+        joinedStream.to(USERS_TOPIC, Produced.with(stringSerde, twitterUserInfoSerde));
 
         streams = new KafkaStreams(builder.build(), config);
         // Clean local store between runs

@@ -10,8 +10,6 @@ import MusicCharts from "./MusicCharts";
 import MusicChart from "../beans/MusicChart";
 import MusicChartService from "../services/MusicChartService";
 
-const backgroundImg = 'resources/background.png';
-
 const musicCharts: MusicChart[] = [
   new MusicChart("sound1", 12),
   new MusicChart("bass4", 5),
@@ -38,7 +36,7 @@ class App extends React.Component<AppProps, undefined> {
 
   componentDidMount() {
     // Only for testing
-    MusicChartService.updateCharts(musicCharts);
+    // MusicChartService.updateCharts(musicCharts);
     testUsers.forEach(user => TwitterUserService.addUser(user));
   }
 
