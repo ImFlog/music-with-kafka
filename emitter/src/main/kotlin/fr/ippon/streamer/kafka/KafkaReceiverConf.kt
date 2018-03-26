@@ -5,9 +5,11 @@ import org.apache.kafka.common.serialization.LongDeserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import reactor.core.publisher.Flux
 import reactor.kafka.receiver.KafkaReceiver
 import reactor.kafka.receiver.ReceiverOptions
 import reactor.kafka.receiver.ReceiverPartition
+import reactor.kafka.receiver.ReceiverRecord
 
 @Configuration
 class KafkaReceiverConf {
@@ -19,7 +21,7 @@ class KafkaReceiverConf {
     private val USERS = "users"
 
     @Bean(name = ["soundsReceiver"])
-    fun soundsReceiver(): KafkaReceiver<String, String> {
+    fun soundsReceiver(): Flux<ReceiverRecord<String, String>> {
         val props: Map<String, Any> = mapOf(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServer,
                 ConsumerConfig.GROUP_ID_CONFIG to groupID,
@@ -30,11 +32,11 @@ class KafkaReceiverConf {
                 .create<String, String>(props)
                 .subscription(setOf(SOUNDS))
                 .addAssignListener { p -> p.forEach(ReceiverPartition::seekToBeginning) }
-        return KafkaReceiver.create(options)
+        return KafkaReceiver.create(options).receive()
     }
 
     @Bean(name = ["chartsReceiver"])
-    fun chartsReceiver(): KafkaReceiver<String, String> {
+    fun chartsReceiver(): Flux<ReceiverRecord<String, String>> {
         val props: Map<String, Any> = mapOf(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServer,
                 ConsumerConfig.GROUP_ID_CONFIG to groupID,
@@ -45,11 +47,11 @@ class KafkaReceiverConf {
                 .create<String, String>(props)
                 .subscription(setOf(CHARTS))
                 .addAssignListener { p -> p.forEach(ReceiverPartition::seekToBeginning) }
-        return KafkaReceiver.create(options)
+        return KafkaReceiver.create(options).receive()
     }
 
     @Bean(name = ["usersReceiver"])
-    fun usersReceiver(): KafkaReceiver<String, String> {
+    fun usersReceiver(): Flux<ReceiverRecord<String, String>> {
         val props: Map<String, Any> = mapOf(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServer,
                 ConsumerConfig.GROUP_ID_CONFIG to groupID,
@@ -60,7 +62,7 @@ class KafkaReceiverConf {
                 .create<String, String>(props)
                 .subscription(setOf(USERS))
                 .addAssignListener { p -> p.forEach(ReceiverPartition::seekToBeginning) }
-        return KafkaReceiver.create(options)
+        return KafkaReceiver.create(options).receive()
     }
 
 

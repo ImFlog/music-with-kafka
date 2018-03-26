@@ -3,6 +3,7 @@ package fr.ippon.kafka.streams.topologies;
 import fr.ippon.kafka.streams.domains.*;
 import fr.ippon.kafka.streams.serdes.SerdeException;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
+import fr.ippon.kafka.streams.serdes.TimedWindowedSerde;
 import fr.ippon.kafka.streams.serdes.WindowedSerde;
 import fr.ippon.kafka.streams.utils.Audio;
 import fr.ippon.kafka.streams.utils.Commons;
@@ -13,14 +14,13 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.QueryableStoreTypes;
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
-import org.apache.kafka.streams.state.WindowStore;
+import org.apache.kafka.streams.processor.WallclockTimestampExtractor;
+import org.apache.kafka.streams.state.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -46,6 +46,7 @@ public class SoundsTopology implements CommandLineRunner {
     private final Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
     private final Serde<String> stringSerde = Serdes.String();
     private final Serde<Windowed<String>> windowedSerde = new WindowedSerde<>(stringSerde);
+    final TimedWindowedSerde<String> timedWindowedSerde = new TimedWindowedSerde<>(stringSerde);
 
     private KafkaStreams streams;
 
@@ -72,7 +73,7 @@ public class SoundsTopology implements CommandLineRunner {
         final KTable<Windowed<String>, Long> songPlayCount = playEvent
                 // group by categories
                 .groupBy((key, value) -> Audio.findCategory(value, categories), Serialized.with(stringSerde, twitterStatusSerde))
-                .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME))) // Tumbling windowing
+                .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME)).until(TimeUnit.SECONDS.toMillis(30L))) // Tumbling windowing
                 .count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(TWEET_PER_CATEGORY)
                         .withValueSerde(Serdes.Long()));
 
@@ -83,7 +84,7 @@ public class SoundsTopology implements CommandLineRunner {
                             Windowed<String> windowedKey = new Windowed<>("TOPS", windowedCategories.window());
                             return KeyValue.pair(windowedKey, new SoundPlayCount(windowedCategories.key(), count));
                         },
-                        Serialized.with(windowedSerde, soundPlayCountSerde))
+                        Serialized.with(timedWindowedSerde, soundPlayCountSerde))
                 .aggregate(TopSongs::new,
                         (key, value, aggregate) -> {
                             aggregate.add(value);
@@ -111,7 +112,18 @@ public class SoundsTopology implements CommandLineRunner {
 
         topNSounds
                 .toStream()
-                .map((windowedKey, message) -> KeyValue.pair(windowedKey.key(), message))
+                .filter(((key, value) -> {
+                    System.out.println("---------------------------------------------------");
+                    long end = key.window().end();
+                    System.out.println(end);
+                    long now = Instant.now().toEpochMilli();
+                    System.out.println(now);
+                    System.out.println(now - end);
+                    System.out.println(end < now);
+                    System.out.println("---------------------------------------------------");
+                    return true;
+                }))
+                .map((windowedKey, message) -> KeyValue.pair(windowedKey.toString(), message))
                 .to(SOUNDS_TOPIC, Produced.with(stringSerde, soundMessageSerde));
 
         streams = new KafkaStreams(builder.build(), config);
@@ -137,8 +149,17 @@ public class SoundsTopology implements CommandLineRunner {
 
     }
 
+    public Stream<String> getTweetsPerCategories(String key) {
+        return Commons.iteratorToStream(getTweetsStore().fetch(key, 0, System.currentTimeMillis()))
+                .map(k -> "times = " + k.key + " - count = " + k.value);
+    }
+
     private ReadOnlyKeyValueStore<Windowed<String>, TopSongs> getTopSongsStore() {
         return streams.store(TOP_SONG, QueryableStoreTypes.keyValueStore());
+    }
+
+    private ReadOnlyWindowStore<String, Long> getTweetsStore() {
+        return streams.store(TWEET_PER_CATEGORY, QueryableStoreTypes.windowStore());
     }
 
     /**
@@ -160,6 +181,9 @@ public class SoundsTopology implements CommandLineRunner {
 
         //ignore deserialization exception
         settings.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, SerdeException.class);
+
+        settings.put(StreamsConfig.WINDOW_STORE_CHANGE_LOG_ADDITIONAL_RETENTION_MS_CONFIG, 30000L);
+        settings.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG, WallclockTimestampExtractor.class);
 
         // Enable exactly once
 //        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);

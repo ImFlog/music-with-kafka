@@ -1,23 +1,22 @@
 package fr.ippon.streamer.kafka
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import fr.ippon.streamer.domains.Action
 import fr.ippon.streamer.domains.ChartPayload
 import fr.ippon.streamer.domains.SoundsPayload
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
-import reactor.kafka.receiver.KafkaReceiver
+import reactor.kafka.receiver.ReceiverRecord
 
 @Service
 class Consumer(
-        @Qualifier("soundsReceiver") private val soundsReceiver: KafkaReceiver<String, String>,
-        @Qualifier("chartsReceiver") private val chartsReceiver: KafkaReceiver<String, String>,
-        @Qualifier("usersReceiver") private val usersReceiver: KafkaReceiver<String, String>,
+        @Qualifier("soundsReceiver") private val soundsReceiver: Flux<ReceiverRecord<String, String>>,
+        @Qualifier("chartsReceiver") private val chartsReceiver: Flux<ReceiverRecord<String, String>>,
+        @Qualifier("usersReceiver") private val usersReceiver: Flux<ReceiverRecord<String, String>>,
         private val mapper: ObjectMapper) {
 
     val stream: Flux<SoundsPayload> by lazy {
-        soundsReceiver.receive()
+        soundsReceiver
                 .doOnNext { it.receiverOffset().acknowledge() }
                 .map {
                     tryOr(SoundsPayload(listOf())) {
@@ -28,7 +27,7 @@ class Consumer(
     }
 
     val chartsStream: Flux<ChartPayload> by lazy {
-        chartsReceiver.receive()
+        chartsReceiver
                 .doOnNext { it.receiverOffset().acknowledge() }
                 .map {
                     tryOr(ChartPayload(listOf())) {
@@ -40,7 +39,6 @@ class Consumer(
 
     val usersStream: Flux<String> by lazy {
         usersReceiver
-                .receive()
                 .doOnNext { it.receiverOffset().acknowledge() }
                 .doOnNext { println("user = ${it.value()}") }
                 .map {

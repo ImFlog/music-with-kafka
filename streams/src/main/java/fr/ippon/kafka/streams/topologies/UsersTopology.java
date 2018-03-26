@@ -64,7 +64,7 @@ public class UsersTopology implements CommandLineRunner {
                 TWITTER_TOPIC,
                 Consumed.with(stringSerde, twitterStatusSerde)
         );
-        twitterStream.print(Printed.toSysOut());
+//        twitterStream.print(Printed.toSysOut());
 
 
         //Feed the user store
