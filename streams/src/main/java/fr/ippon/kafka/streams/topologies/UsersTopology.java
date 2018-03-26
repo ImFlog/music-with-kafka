@@ -18,6 +18,7 @@ import javax.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static fr.ippon.kafka.streams.utils.Const.*;
@@ -88,10 +89,8 @@ public class UsersTopology implements CommandLineRunner {
                         Joined.with(stringSerde, longSerde, twitterUserInfoSerde)
                 );
 
-        //TODO: the send to USER_FEED update the user state store. Will we keep this ?
-        joinedStream.to(USER_FEED, Produced.with(stringSerde, twitterUserInfoSerde));
-
-        joinedStream.to(USERS_TOPIC, Produced.with(stringSerde, twitterUserInfoSerde));
+        joinedStream
+                .to(USERS_TOPIC, Produced.with(stringSerde, twitterUserInfoSerde));
 
         streams = new KafkaStreams(builder.build(), config);
         // Clean local store between runs

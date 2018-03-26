@@ -2,7 +2,6 @@ package fr.ippon.streamer.kafka
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import fr.ippon.streamer.domains.Action
-import fr.ippon.streamer.domains.Chart
 import fr.ippon.streamer.domains.ChartPayload
 import fr.ippon.streamer.domains.Payload
 import org.springframework.beans.factory.annotation.Qualifier
@@ -14,6 +13,7 @@ import reactor.kafka.receiver.KafkaReceiver
 class Consumer(
         @Qualifier("soundsReceiver") private val soundsReceiver: KafkaReceiver<String, String>,
         @Qualifier("chartsReceiver") private val chartsReceiver: KafkaReceiver<String, String>,
+        @Qualifier("usersReceiver") private val usersReceiver: KafkaReceiver<String, String>,
         private val mapper: ObjectMapper) {
 
     val stream: Flux<Payload> by lazy {
@@ -33,6 +33,19 @@ class Consumer(
                 .map {
                     tryOr(ChartPayload(listOf())) {
                         mapper.readValue(it.value(), ChartPayload::class.java)
+                    }
+                }
+                .share()
+    }
+
+    val usersStream: Flux<String> by lazy {
+        usersReceiver
+                .receive()
+                .doOnNext { it.receiverOffset().acknowledge() }
+                .doOnNext { println("user = ${it.value()}") }
+                .map {
+                    tryOr("") {
+                        it.value()
                     }
                 }
                 .share()
