@@ -39,6 +39,19 @@ services:
     build:
       context: ./emitter
     network_mode: "host"
+    volumes:
+      - "$HOME/.gradle:/root/.gradle"
+    depends_on:
+      - zookeeper
+      - kafka
+      - streams
+
+  streams:
+    build:
+      context: ./streams
+    network_mode: host
+    volumes:
+      - "$HOME/.gradle:/root/.gradle"      
     depends_on:
       - zookeeper
       - kafka

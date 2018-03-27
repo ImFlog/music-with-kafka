@@ -24,7 +24,8 @@ apply plugin: 'io.spring.dependency-management'
 
 
 group = 'fr.ippon'
-version = '0.0.1-SNAPSHOT'
+archivesBaseName = 'streams'
+version = '1.0'
 sourceCompatibility = 1.8
 
 repositories {

@@ -17,4 +17,4 @@ RUN gradle build
 FROM openjdk:8u151-jre-slim-stretch
 
 COPY --from=build /home/gradle/project/build/libs/s* .
-CMD ["java", "-jar", "streamer-1.0.jar"]
+CMD ["java", "-jar", "streams-1.0.jar"]
