@@ -78,13 +78,12 @@ class App extends React.Component<AppProps, undefined> {
     return (
       <div style={styles.appStyle}>
         <div style={styles.tweetStyle}>
-          <h1>Top Twittos </h1> <input type='text' onKeyPress={this.addTwitterUser.bind(this)} />
+          <h1>Top Twittos </h1>
           <TwitterUserList twitterUsers={TwitterUserService.users} />
         </div>
 
         <div style={styles.musicStyle}>
-          <h1>Music in progress</h1> <input type='text' onKeyPress={this.playMusic.bind(this)} />
-          <MusicList musics={MusicPlayer.musics} />
+          <MusicList musics={MusicPlayer.musics} incomingMusics={MusicPlayer.incomingMusics} />
         </div>
 
         <div style={styles.chartStyle}>

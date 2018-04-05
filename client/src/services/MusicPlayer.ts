@@ -7,6 +7,7 @@ const MAGIC_NUMBER = 4363.900226757;
 
 class MusicPlayer {
   @observable musics: IObservableArray<Music> = observable([]);
+  @observable incomingMusics: IObservableArray<String> = observable([]);
   audioCtx: AudioContext;
   musicLoader: MusicLoader;
 
@@ -20,6 +21,7 @@ class MusicPlayer {
 
     // STOP the music being played
     this._stopPlayingMusic();
+    this.incomingMusics.replace(musicEvent.sounds);
 
     this.musicLoader = new MusicLoader(
       this.audioCtx,
@@ -53,6 +55,7 @@ class MusicPlayer {
       }
     });
     this._removedStoppedMusic();
+    this.incomingMusics.clear();
   }
 
   private _removedStoppedMusic() {
