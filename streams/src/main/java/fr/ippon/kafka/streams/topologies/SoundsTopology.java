@@ -28,7 +28,7 @@ import static java.util.stream.Collectors.toList;
 
 @Component
 /**
- * Send a {@link SoundMessage.class} to SOUNDS_TOPIC for each category every WINDOWING_TIME.
+ * Send a {@link SoundMessage} to SOUNDS_TOPIC for each category every WINDOWING_TIME.
  */
 public class SoundsTopology implements CommandLineRunner {
 
