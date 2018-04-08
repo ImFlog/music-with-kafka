@@ -21,8 +21,13 @@ Kafka will be available at localhost:9092.
 
 ## Kafka Connect
 1. Do a `git submodule init && git submodule update`
-2. Change connect/twitter.properties to add your twitter tokens (use [twitter app manager](https://apps.twitter.com/))
-3. Launch the script `connect/start_connect.sh`
+2. Execute `mvn clean package` in connect/kafka-connect-twitter
+3. Change connect/twitter.json to add your twitter tokens (use [twitter app manager](https://apps.twitter.com/))
+4. Launch the docker container with `sudo docker-compose up connect`
+5. Using curl you can now start the twitter connector with the following command:
+`$ curl -X POST -H "Content-Type: application/json" --data-binary @connect/twitter.json localhost:8082/connectors`
+
+Everything is ready ! You are now listening to #mwk on twitter !
 
 For testing purpose, you can run the loader_script located in /connect. It will inject fake tweets in you twitter_json topic and you will be able to run the rest of the code.
 
