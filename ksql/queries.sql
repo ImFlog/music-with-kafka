@@ -8,6 +8,7 @@ DROP STREAM twitter_raw;
 
 -- Set properties
 SET 'auto.offset.reset' = 'earliest';
+SET 'commit.interval.ms' = '5000';
 
 -- Read twitter stream
 CREATE STREAM twitter_raw (CreatedAt BIGINT, Id BIGINT, Text VARCHAR, User VARCHAR) \
@@ -36,7 +37,7 @@ FROM twitter_clean \
 GROUP BY ScreenName;
 
 -- Show data
-SELECT ScreenName, Image FROM user_tweet_count LIMIT 10;
+SELECT ScreenName, Count FROM user_tweet_count LIMIT 10;
 
 -- Join example : Melody tweets per user 
 -- We need to force PARTITION BY https://github.com/confluentinc/ksql/issues/749
