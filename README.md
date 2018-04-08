@@ -11,7 +11,13 @@ bass\
 vocal\
      vocal0.ogg
      ... 
-4. Launch the init_topic.sh script.
+
+## Starting Kafka
+To simplify things, we simply added this [repo](https://github.com/wurstmeister/kafka-docker) and added what is needed for this project.
+
+To start kafka go to `kafka-docker` and type : `docker-compose up -d`
+
+Kafka will be available at localhost:9092.
 
 ## Kafka Connect
 1. Do a `git submodule init && git submodule update`
@@ -25,40 +31,22 @@ For testing purpose, you can run the loader_script located in /connect. It will 
 2. You can check the messages are correctly written in your topic using `$KAFKA_HOME/bin/kafka-console-consumer.sh --topic sounds --bootstrap-server localhost:9092 --property "print.key=true`
 
 ## Emitter (SSE toward the frontend)
-Streamer app react to message of type `{"action":string, "path":string}` on topic `sounds`
+The Emitter is a simple bridge between the Client and Kafka Streams. 
 
-Possible values for action: 
-* `PLAY`
-* `STOP`
-
-Possible values are the path of the files you want to play in the audio directory. For example :
-* `drum/drum[1-10].ogg`
-* `bass/bass[1-10].ogg`
-* `sound/sound[1-16].ogg`
-
-Example:
-
-``` sh
-bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test
-> {"action": "PLAY", "path": "sound/sound1.ogg"}
-> {"action": "PLAY", "path": "drum/drum4.ogg"}
-> {"action": "PLAY", "path": "bass/bass6.ogg"}
-> {"action": "STOP", "path": "sound/sound1.ogg"}
-```
+It's consuming the 3 topics (sounds / user-feed / users) and simply redirects messages to the client via Server Sent Events (SSE)
 
 To start the emitter application :
 `./gradlew build && ./gradlew bootRun`
 
 ## Client
-
-Client app will listen for incoming message from streamer app by using SSE mechanism.
-You need to provide ogg audio files in (client/audio) in order to play music.
+Client app will listen for incoming message from the emitter app by using SSE mechanism.
+You need to provide ogg audio files in (client/audio) in order to play music. (See Prerequisites)
 
 To start the client :
 `yarn install && yarn start`
 
-(To complete)
-
 ## KSQL
-You will need a KSQL client. Follow the [KSQL setup](https://github.com/confluentinc/ksql/tree/v0.5/docs/quickstart#setup) to do so.
+You will need a KSQL client.
+Follow the [KSQL setup](https://github.com/confluentinc/ksql/tree/v0.5/docs/quickstart#setup) to do so. 
+
 Then you can try the queries in ksql/queries.sql.
