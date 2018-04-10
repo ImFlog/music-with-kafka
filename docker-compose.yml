@@ -46,10 +46,10 @@ services:
       CONNECT_REST_ADVERTISED_HOST_NAME: "localhost"
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
       CONNECT_LOG4J_LOGGERS: org.reflections=ERROR
-      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect-twitter
+      CONNECT_PLUGIN_PATH: /usr/share/java
       CONNECT_REST_HOST_NAME: "localhost"
     volumes:
-      - "./connect/kafka-connect-twitter/target/kafka-connect-target/usr/share/kafka-connect/kafka-connect-twitter:/usr/share/java/twitter"
+      - "./connect/connect-jars:/usr/share/java/twitter"
 
   schema_registry:
     image: confluentinc/cp-schema-registry

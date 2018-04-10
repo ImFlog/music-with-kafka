@@ -1,3 +1,0 @@
-[submodule "connect/kafka-connect-twitter"]
-	path = connect/kafka-connect-twitter
-	url = https://github.com/jcustenborder/kafka-connect-twitter
