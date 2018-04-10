@@ -62,7 +62,7 @@ To start the client :
 `yarn install && yarn start`
 
 ## KSQL
-You will need a KSQL client.
-Follow the [KSQL setup](https://github.com/confluentinc/ksql/tree/v0.5/docs/quickstart#setup) to do so. 
+1. Launch KSQL `sudo docker-compose up -d ksql`
+2. Start a command line : `sudo docker-compose exec ksql ksql-cli local --bootstrap-server localhost:9092`
 
 Then you can try the queries in ksql/queries.sql.
