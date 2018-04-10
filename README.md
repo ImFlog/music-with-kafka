@@ -2,25 +2,28 @@
 This repository contains material for the Devoxx 2018 university "De la musique collaborative avec Kafka".
 
 ## Prerequisites
-1. You need to have a locally running Kafka broker on port 9092.
-2. You need to set the environment variable $KAFKA_HOME (i.e : /usr/share/kafka).
-3. You also need to find some .ogg files to play. Please use the following configuration : directories and files should be named the same way. i.e:
+1. You need to have [docker](https://docs.docker.com/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed.
+2. You also need to find some .ogg files to play. Please use the following configuration : directories and files should be named the same way. i.e:
 bass\
      bass0.ogg
      bass1.ogg
 vocal\
      vocal0.ogg
      ... 
+3. Launch Kafka and create the needed topics :
+```
+# Start Kafka
+sudo docker-compose up -d kafka
 
-## Starting Kafka
-To simplify things, we simply added this [repo](https://github.com/wurstmeister/kafka-docker) and added what is needed for this project.
-
-To start kafka go to `kafka-docker` and type : `docker-compose up -d`
-
-Kafka will be available at localhost:9092.
+# Create topics
+sudo docker-compose exec kafka kafka-topics --create --topic twitter_json --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
+sudo docker-compose exec kafka kafka-topics --create --topic users --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
+sudo docker-compose exec kafka kafka-topics --create --topic user-feed --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
+sudo docker-compose exec kafka kafka-topics --create --topic sounds --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
+```
 
 ## Kafka Connect
-We are using the [kafka-connect-twitter](https://github.com/jcustenborder/kafka-connect-twitter) connector.
+We are using the [kafka-connect-twitter connector](https://github.com/jcustenborder/kafka-connect-twitter).
 
 1. Change connect/twitter.json to add your twitter tokens (use [twitter app manager](https://apps.twitter.com/))
 2. Launch the docker container with `sudo docker-compose up connect`
