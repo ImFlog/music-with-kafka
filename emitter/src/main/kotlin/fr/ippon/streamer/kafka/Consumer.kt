@@ -19,20 +19,28 @@ class Consumer(
     var payloadToSend = Pair("", false)
 
     val stream: Flux<SoundsPayload> by lazy {
+//        soundsReceiver
+//                .doOnNext { it.receiverOffset().acknowledge() }
+//                .map {
+//                    payloadToSend = when(previousState.first) {
+//                        it.key() -> Pair("", false)
+//                        else -> Pair(previousState.second, true)
+//                    }
+//                    previousState = Pair(it.key(), it.value())
+//                    payloadToSend
+//                }
+//                .filter { it.second }
+//                .map {
+//                    tryOr(SoundsPayload(listOf())) {
+//                        mapper.readValue(it.first, SoundsPayload::class.java)
+//                    }
+//                }
+//                .share()
         soundsReceiver
                 .doOnNext { it.receiverOffset().acknowledge() }
                 .map {
-                    payloadToSend = when(previousState.first) {
-                        it.key() -> Pair("", false)
-                        else -> Pair(previousState.second, true)
-                    }
-                    previousState = Pair(it.key(), it.value())
-                    payloadToSend
-                }
-                .filter { it.second }
-                .map {
                     tryOr(SoundsPayload(listOf())) {
-                        mapper.readValue(it.first, SoundsPayload::class.java)
+                        mapper.readValue(it.value(), SoundsPayload::class.java)
                     }
                 }
                 .share()

@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration
 import reactor.core.publisher.Flux
 import reactor.kafka.receiver.KafkaReceiver
 import reactor.kafka.receiver.ReceiverOptions
+import reactor.kafka.receiver.ReceiverPartition
 import reactor.kafka.receiver.ReceiverRecord
 
 @Configuration
@@ -29,6 +30,7 @@ class KafkaReceiverConf {
         val options = ReceiverOptions
                 .create<String, String>(props)
                 .subscription(setOf(SOUNDS))
+                .addAssignListener { p -> p.forEach(ReceiverPartition::seekToEnd) }
         return KafkaReceiver.create(options).receive()
     }
 
@@ -43,6 +45,7 @@ class KafkaReceiverConf {
         val options = ReceiverOptions
                 .create<String, String>(props)
                 .subscription(setOf(CHARTS))
+                .addAssignListener { p -> p.forEach(ReceiverPartition::seekToEnd) }
         return KafkaReceiver.create(options).receive()
     }
 
@@ -57,6 +60,7 @@ class KafkaReceiverConf {
         val options = ReceiverOptions
                 .create<String, String>(props)
                 .subscription(setOf(USERS))
+                .addAssignListener { p -> p.forEach(ReceiverPartition::seekToEnd) }
         return KafkaReceiver.create(options).receive()
     }
 

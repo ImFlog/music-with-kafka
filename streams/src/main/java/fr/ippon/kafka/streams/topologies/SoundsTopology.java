@@ -1,35 +1,32 @@
 package fr.ippon.kafka.streams.topologies;
 
-import fr.ippon.kafka.streams.domains.*;
+import fr.ippon.kafka.streams.domains.SoundMessage;
+import fr.ippon.kafka.streams.domains.SoundPlayCount;
+import fr.ippon.kafka.streams.domains.TwitterStatus;
 import fr.ippon.kafka.streams.serdes.SerdeException;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
-import fr.ippon.kafka.streams.serdes.TimedWindowedSerde;
-import fr.ippon.kafka.streams.serdes.WindowedSerde;
-import fr.ippon.kafka.streams.utils.Audio;
 import fr.ippon.kafka.streams.utils.Commons;
-import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.state.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Stream;
 
 import static fr.ippon.kafka.streams.utils.Const.*;
-import static java.util.stream.Collectors.toList;
 
 @Component
-/**
- * Send a {@link SoundMessage} to SOUNDS_TOPIC for each category every WINDOWING_TIME.
- */
 public class SoundsTopology implements CommandLineRunner {
 
     private static final String APPLICATION_ID_VALUE = "SoundsTopology";
@@ -39,12 +36,8 @@ public class SoundsTopology implements CommandLineRunner {
     // Define custom serdes
     private final Map<String, Object> serdeProps = new HashMap<>();
     private final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
-    private final Serde<SoundPlayCount> soundPlayCountSerde = SerdeFactory.createSerde(SoundPlayCount.class, serdeProps);
-    private final Serde<TopSongs> topSongSerde = SerdeFactory.createSerde(TopSongs.class, serdeProps);
     private final Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
     private final Serde<String> stringSerde = Serdes.String();
-    private final Serde<Windowed<String>> windowedSerde = new WindowedSerde<>(stringSerde);
-    final TimedWindowedSerde<String> timedWindowedSerde = new TimedWindowedSerde<>(stringSerde);
 
     private KafkaStreams streams;
 
@@ -53,69 +46,24 @@ public class SoundsTopology implements CommandLineRunner {
 
         // Create an instance of StreamsConfig from the Properties instance
         StreamsConfig config = kStreamConfig();
-        StreamsBuilder builder = new StreamsBuilder();
 
-        //Fetch available sounds categories
-        final Categories categories = Audio.retrieveAvailableCategories();
+        Topology topology = new Topology();
 
+        KeyValueBytesStoreSupplier persistentKeyValueStore = Stores.persistentKeyValueStore(TOP_SONG);
 
-        final Map<String, String> serdeConfig = Collections.singletonMap(
-                AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
-                "http://localhost:8081"
+        StoreBuilder<KeyValueStore<String, Long>> keyValueStoreStoreBuilder = Stores.keyValueStoreBuilder(
+                persistentKeyValueStore,
+                stringSerde,
+                Serdes.Long()
         );
 
+        topology.addSource("Source", stringSerde.deserializer(), twitterStatusSerde.deserializer(), TWITTER_TOPIC)
+                .addProcessor("Process", SoundsProcessor::new, "Source")
+                .addStateStore(keyValueStoreStoreBuilder, "Process")
+                .addSink("Sink", SOUNDS_TOPIC, stringSerde.serializer(), soundMessageSerde.serializer(), "Process");
 
-        final KStream<String, TwitterStatus> playEvent = builder
-                .stream(TWITTER_TOPIC, Consumed.with(stringSerde, twitterStatusSerde));
+        streams = new KafkaStreams(topology, config);
 
-        final KTable<Windowed<String>, Long> songPlayCount = playEvent
-                // group by categories
-                .groupBy((key, value) -> Audio.findCategory(value, categories), Serialized.with(stringSerde, twitterStatusSerde))
-                .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME))) // Tumbling windowing
-                .count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(TWEET_PER_CATEGORY)
-                        .withValueSerde(Serdes.Long()));
-
-
-        final KTable<Windowed<String>, TopSongs> songsKTable = songPlayCount
-                .groupBy((windowedCategories, count) -> {
-                            //we have to use a windowed key to run aggregation on timed windows
-                            Windowed<String> windowedKey = new Windowed<>("TOPS", windowedCategories.window());
-                            return KeyValue.pair(windowedKey, new SoundPlayCount(windowedCategories.key(), count));
-                        },
-                        Serialized.with(timedWindowedSerde, soundPlayCountSerde))
-                .aggregate(TopSongs::new,
-                        (key, value, aggregate) -> {
-                            aggregate.add(value);
-                            return aggregate;
-                        },
-                        (key, value, aggregate) -> {
-                            aggregate.remove(value);
-                            return aggregate;
-                        },
-                        Materialized.<Windowed<String>, TopSongs, KeyValueStore<Bytes, byte[]>>as(TOP_SONG)
-                                .withValueSerde(topSongSerde));
-
-
-        //We will retrieve top N songs from aggregate results
-        final KTable<Windowed<String>, SoundMessage> topNSounds = songsKTable
-                .mapValues(topSongs -> {
-                    List<String> paths = topSongs
-                            .toStream()
-                            .limit(5)
-                            .map(SoundPlayCount::getName)
-                            .map(s -> String.format("%s/%s%d.ogg", s, s, categories.fetchRandomIndex(s)))
-                            .collect(toList());
-                    return new SoundMessage(paths);
-                });
-
-        topNSounds
-                .toStream()
-                .map((windowedKey, message) -> KeyValue.pair(
-                        String.format("%s%d", windowedKey.key(), windowedKey.window().end()),
-                        message))
-                .to(SOUNDS_TOPIC, Produced.with(stringSerde, soundMessageSerde));
-
-        streams = new KafkaStreams(builder.build(), config);
 
         // Clean local store between runs
         streams.cleanUp();
@@ -130,11 +78,11 @@ public class SoundsTopology implements CommandLineRunner {
     }
 
     public Stream<SoundPlayCount> getLastTopSongs() {
+        Comparator<KeyValue<String, Long>> comparator = Comparator.comparingLong(kv -> kv.value);
         return Commons.iteratorToStream(getTopSongsStore().all())
-                .max(Comparator.comparingLong(kv -> kv.key.window().start()))
-                .map(kv -> kv.value)
-                .orElseGet(TopSongs::new)
-                .toStream();
+                .sorted(comparator.reversed())
+                .limit(5)
+                .map(kv -> new SoundPlayCount(kv.key, kv.value));
     }
 
     public Stream<String> getTweetsPerCategories(String key) {
@@ -142,7 +90,7 @@ public class SoundsTopology implements CommandLineRunner {
                 .map(k -> "times = " + k.key + " - count = " + k.value);
     }
 
-    private ReadOnlyKeyValueStore<Windowed<String>, TopSongs> getTopSongsStore() {
+    private ReadOnlyKeyValueStore<String, Long> getTopSongsStore() {
         return streams.store(TOP_SONG, QueryableStoreTypes.keyValueStore());
     }
 
@@ -170,7 +118,7 @@ public class SoundsTopology implements CommandLineRunner {
         //ignore deserialization exception
         settings.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, SerdeException.class);
 
-        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
+//        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
 
 
         // Enable exactly once
@@ -182,4 +130,3 @@ public class SoundsTopology implements CommandLineRunner {
     }
 
 }
-
