@@ -36,7 +36,7 @@ public class Charts implements Iterable<Chart> {
     }
 
     public Stream<Chart> toStream() {
-        return StreamSupport.stream(chartset.spliterator(), false);
+        return chartset.stream();
     }
 
 }

@@ -15,27 +15,7 @@ class Consumer(
         @Qualifier("usersReceiver") private val usersReceiver: Flux<ReceiverRecord<String, String>>,
         private val mapper: ObjectMapper) {
 
-    var previousState = Pair("", "")
-    var payloadToSend = Pair("", false)
-
     val stream: Flux<SoundsPayload> by lazy {
-//        soundsReceiver
-//                .doOnNext { it.receiverOffset().acknowledge() }
-//                .map {
-//                    payloadToSend = when(previousState.first) {
-//                        it.key() -> Pair("", false)
-//                        else -> Pair(previousState.second, true)
-//                    }
-//                    previousState = Pair(it.key(), it.value())
-//                    payloadToSend
-//                }
-//                .filter { it.second }
-//                .map {
-//                    tryOr(SoundsPayload(listOf())) {
-//                        mapper.readValue(it.first, SoundsPayload::class.java)
-//                    }
-//                }
-//                .share()
         soundsReceiver
                 .doOnNext { it.receiverOffset().acknowledge() }
                 .map {

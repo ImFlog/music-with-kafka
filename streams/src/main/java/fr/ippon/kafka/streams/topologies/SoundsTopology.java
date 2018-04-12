@@ -32,17 +32,22 @@ public class SoundsTopology implements CommandLineRunner {
     private static final String APPLICATION_ID_VALUE = "SoundsTopology";
     private static final String BOOTSTRAP_SERVERS_VALUE = "localhost:9092";
     private static final String AUTO_OFFSET_VALUE = "earliest";
+    private static final String SOURCE_NODE = "Source";
+    private static final String PROCESS_NODE = "Process";
+    private static final String SINK_NODE = "Sink";
 
-    // Define custom serdes
-    private final Map<String, Object> serdeProps = new HashMap<>();
-    private final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
-    private final Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
-    private final Serde<String> stringSerde = Serdes.String();
 
     private KafkaStreams streams;
 
     @Override
     public void run(String... args) {
+
+        // Define custom serdes
+        final Map<String, Object> serdeProps = new HashMap<>();
+        final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
+        final Serde<SoundMessage> soundMessageSerde = SerdeFactory.createSerde(SoundMessage.class, serdeProps);
+        final Serde<String> stringSerde = Serdes.String();
+        final Serde<Long> longSerde = Serdes.Long();
 
         // Create an instance of StreamsConfig from the Properties instance
         StreamsConfig config = kStreamConfig();
@@ -54,14 +59,16 @@ public class SoundsTopology implements CommandLineRunner {
         StoreBuilder<KeyValueStore<String, Long>> keyValueStoreStoreBuilder = Stores.keyValueStoreBuilder(
                 persistentKeyValueStore,
                 stringSerde,
-                Serdes.Long()
+                longSerde
         );
 
-        topology.addSource("Source", stringSerde.deserializer(), twitterStatusSerde.deserializer(), TWITTER_TOPIC)
-                .addProcessor("Process", SoundsProcessor::new, "Source")
-                .addStateStore(keyValueStoreStoreBuilder, "Process")
-                .addSink("Sink", SOUNDS_TOPIC, stringSerde.serializer(), soundMessageSerde.serializer(), "Process");
+        topology
+                .addSource(SOURCE_NODE, stringSerde.deserializer(), twitterStatusSerde.deserializer(), TWITTER_TOPIC)
+                .addProcessor(PROCESS_NODE, SoundsProcessor::new, SOURCE_NODE)
+                .addStateStore(keyValueStoreStoreBuilder, PROCESS_NODE)
+                .addSink(SINK_NODE, SOUNDS_TOPIC, stringSerde.serializer(), soundMessageSerde.serializer(), PROCESS_NODE);
 
+        
         streams = new KafkaStreams(topology, config);
 
 
@@ -117,8 +124,6 @@ public class SoundsTopology implements CommandLineRunner {
 
         //ignore deserialization exception
         settings.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, SerdeException.class);
-
-//        settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 5_000L);
 
 
         // Enable exactly once

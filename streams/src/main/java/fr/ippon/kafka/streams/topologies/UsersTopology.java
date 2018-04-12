@@ -45,6 +45,8 @@ public class UsersTopology implements CommandLineRunner {
 
     private static final String USER_FEED = "user-feed";
     private static final String ALL_USERS = "all-users";
+    private static final String APPLICATION_ID = "UsersTopology";
+    private static final String BOOTSTRAP_SERVERS = "localhost:9092";
     private KafkaStreams streams;
 
     // Define custom serdes
@@ -68,16 +70,6 @@ public class UsersTopology implements CommandLineRunner {
 //        twitterStream.print(Printed.toSysOut());
 
 
-        //Feed the user store
-        twitterStream
-                .map((k, v) -> {
-                    TwitterUserInfo userInfo = new TwitterUserInfo(
-                            v.getUser().getScreenName(),
-                            v.getUser().getProfileImageURL()
-                    );
-                    return KeyValue.pair(v.getUser().getScreenName(), userInfo);
-                }).to(USER_FEED, Produced.with(stringSerde, twitterUserInfoSerde));
-
         //Construct a state store to hold all the users in the store
         final KTable<String, TwitterUserInfo> usersTable = builder
                 .table(
@@ -86,16 +78,28 @@ public class UsersTopology implements CommandLineRunner {
                         Materialized.as(ALL_USERS)
                 );
 
+        //Feed the user store
+        twitterStream
+                .map((key, twitterStatus) -> {
+                    TwitterUserInfo userInfo = new TwitterUserInfo(
+                            twitterStatus.getUser().getScreenName(),
+                            twitterStatus.getUser().getProfileImageURL()
+                    );
+                    return KeyValue.pair(twitterStatus.getUser().getScreenName(), userInfo);
+                })
+                .to(USER_FEED, Produced.with(stringSerde, twitterUserInfoSerde));
+
+
         //Join the tweet streams with our user state store to return a user with his tweets count
         final KStream<String, TwitterUserInfo> joinedStream = twitterStream
-                .groupBy((key, value) -> value.getUser().getScreenName(), Serialized.with(stringSerde, twitterStatusSerde))
+                .groupBy((key, twitterStatus) -> twitterStatus.getUser().getScreenName(), Serialized.with(stringSerde, twitterStatusSerde))
                 .count(Materialized.as(TWEET_PER_USER))
                 .toStream()
                 .leftJoin(
                         usersTable,
-                        (v, info) -> {
-                            info.setTweetCount(v);
-                            return info;
+                        (count, twitterUserInfo) -> {
+                            twitterUserInfo.setTweetCount(count);
+                            return twitterUserInfo;
                         },
                         Joined.with(stringSerde, longSerde, twitterUserInfoSerde)
                 );
@@ -137,9 +141,9 @@ public class UsersTopology implements CommandLineRunner {
     private static StreamsConfig kStreamConfig() {
         Properties settings = new Properties();
         // Application ID, used for consumer groups
-        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "UsersTopology");
+        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_ID);
         // Kafka bootstrap server (broker to talk to)
-        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
 
         // default serdes for serializing and deserializing key and value from and to streams
         settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());

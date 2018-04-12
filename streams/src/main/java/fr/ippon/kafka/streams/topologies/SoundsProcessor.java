@@ -13,6 +13,7 @@ import org.apache.kafka.streams.processor.Punctuator;
 import org.apache.kafka.streams.state.KeyValueStore;
 
 import java.util.Comparator;
+import java.util.function.Function;
 
 import static fr.ippon.kafka.streams.utils.Const.TOP_SONG;
 import static java.util.stream.Collectors.collectingAndThen;
@@ -20,8 +21,10 @@ import static java.util.stream.Collectors.toList;
 
 public class SoundsProcessor implements Processor<String, TwitterStatus> {
 
+    private static final int INTERVAL = 30000;
+    private static final String TOPS = "TOPS";
+    private static final int MAX_SIZE = 5;
     private boolean isLaunched = false;
-
     private ProcessorContext context;
     private KeyValueStore<String, Long> kvStore;
     private final Categories categories = Audio.retrieveAvailableCategories();
@@ -30,9 +33,7 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         this.context = context;
-
         kvStore = (KeyValueStore) context.getStateStore(TOP_SONG);
-
     }
 
     @Override
@@ -40,7 +41,7 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
         if (!isLaunched) {
             isLaunched = true;
             System.out.println("Schedule Task !");
-            this.context.schedule(30000, PunctuationType.WALL_CLOCK_TIME, getPunctuator());
+            this.context.schedule(INTERVAL, PunctuationType.WALL_CLOCK_TIME, getPunctuator());
         }
 
         final String category = Audio.findCategory(twitterStatus, categories);
@@ -53,28 +54,6 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
         }
     }
 
-    private Punctuator getPunctuator() {
-        return timestamp -> {
-            Comparator<KeyValue<String, Long>> comparator = Comparator.comparingLong(kv -> kv.value);
-            SoundMessage message = Commons
-                    .iteratorToStream(this.kvStore.all())
-                    .sorted(comparator.reversed())
-                    .peek(kv -> this.kvStore.delete(kv.key))
-                    .limit(5)
-                    .map(kv -> kv.key)
-                    .map(s -> String.format("%s/%s%d.ogg", s, s, categories.fetchRandomIndex(s)))
-                    .collect(collectingAndThen(toList(), SoundMessage::new));
-
-            if (!message.getSounds().isEmpty()) {
-                System.out.println("forward message");
-                context.forward("TOPS", message);
-                context.commit();
-            } else {
-                System.out.println("Nothing to do, store is empty");
-            }
-        };
-    }
-
     @Override
     public void punctuate(long timestamp) {
         // deprecated
@@ -82,6 +61,40 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
 
     @Override
     public void close() {
-        this.kvStore.close();
+        //release
     }
+
+    private Punctuator getPunctuator() {
+        Comparator<KeyValue<String, Long>> comparator = Comparator.comparingLong(kv -> kv.value);
+        Function<KeyValueStore<String, Long>, SoundMessage> messageGenerator = soundMessageGenerator(comparator);
+        return timestamp -> {
+            SoundMessage message = messageGenerator.apply(this.kvStore);
+            clean(this.kvStore);
+            if (message.getSounds().isEmpty()) {
+                System.out.println("Nothing to do, store is empty");
+            } else {
+                System.out.println("forward message");
+                context.forward(TOPS, message);
+                context.commit();
+            }
+        };
+    }
+
+    private Function<KeyValueStore<String, Long>, SoundMessage> soundMessageGenerator(Comparator<KeyValue<String, Long>> comparator) {
+        return store -> Commons
+                .iteratorToStream(store.all())
+                .sorted(comparator.reversed())
+                .limit(MAX_SIZE)
+                .map(kv -> kv.key)
+                .map(s -> String.format("%s/%s%d.ogg", s, s, categories.fetchRandomIndex(s)))
+                .collect(collectingAndThen(toList(), SoundMessage::new));
+    }
+
+    private void clean(KeyValueStore<String, Long> store) {
+        Commons
+                .iteratorToStream(store.all())
+                .forEach(kv -> store.delete(kv.key));
+    }
+
+
 }

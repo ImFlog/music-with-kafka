@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static fr.ippon.kafka.streams.utils.Const.*;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toList;
 
 @Component
 /**
@@ -86,11 +88,7 @@ public class ChartsTopology implements CommandLineRunner {
                         Materialized.<Windowed<String>, Charts, KeyValueStore<Bytes, byte[]>>as("chartsSong")
                                 .withValueSerde(chartsSerde)
                 )
-                .mapValues(charts -> {
-                    List<Chart> list = charts.toStream()
-                            .collect(Collectors.toList());
-                    return new ChartMessage(list);
-                })
+                .mapValues(charts -> charts.toStream().collect(collectingAndThen(toList(), ChartMessage::new)))
                 .toStream()
                 .map((windowedKey, value) -> KeyValue.pair(windowedKey.key(), value))
                 .to(CHARTS_TOPIC, Produced.with(stringSerde, messageSerde));
