@@ -3,6 +3,7 @@ package fr.ippon.streamer.kafka
 import com.fasterxml.jackson.databind.ObjectMapper
 import fr.ippon.streamer.domains.ChartPayload
 import fr.ippon.streamer.domains.SoundsPayload
+import fr.ippon.streamer.domains.UserMessage
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -13,6 +14,7 @@ class Consumer(
         @Qualifier("soundsReceiver") private val soundsReceiver: Flux<ReceiverRecord<String, String>>,
         @Qualifier("chartsReceiver") private val chartsReceiver: Flux<ReceiverRecord<String, String>>,
         @Qualifier("usersReceiver") private val usersReceiver: Flux<ReceiverRecord<String, String>>,
+        @Qualifier("userMessageReceiver") private val userMessageReceiver: Flux<ReceiverRecord<String, String>>,
         private val mapper: ObjectMapper) {
 
     val stream: Flux<SoundsPayload> by lazy {
@@ -44,6 +46,17 @@ class Consumer(
                 .map {
                     tryOr("") {
                         it.value()
+                    }
+                }
+                .share()
+    }
+
+    val userMessageStream: Flux<UserMessage> by lazy {
+        userMessageReceiver
+                .doOnNext { it.receiverOffset().acknowledge() }
+                .map {
+                    tryOr(UserMessage("", "")) {
+                        mapper.readValue(it.value(), UserMessage::class.java)
                     }
                 }
                 .share()

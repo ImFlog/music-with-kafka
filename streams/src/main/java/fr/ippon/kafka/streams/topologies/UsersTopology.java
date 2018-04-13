@@ -2,6 +2,7 @@ package fr.ippon.kafka.streams.topologies;
 
 import fr.ippon.kafka.streams.domains.TwitterStatus;
 import fr.ippon.kafka.streams.domains.TwitterUserInfo;
+import fr.ippon.kafka.streams.domains.TwitterUserMessage;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
 import fr.ippon.kafka.streams.utils.Commons;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -44,6 +45,7 @@ import static fr.ippon.kafka.streams.utils.Const.USERS_TOPIC;
 public class UsersTopology implements CommandLineRunner {
 
     private static final String USER_FEED = "user-feed";
+    private static final String USER_MESSAGE = "user-message";
     private static final String ALL_USERS = "all-users";
     private static final String APPLICATION_ID = "UsersTopology";
     private static final String BOOTSTRAP_SERVERS = "localhost:9092";
@@ -53,6 +55,7 @@ public class UsersTopology implements CommandLineRunner {
     private final Map<String, Object> serdeProps = new HashMap<>();
     private final Serde<TwitterStatus> twitterStatusSerde = SerdeFactory.createSerde(TwitterStatus.class, serdeProps);
     private final Serde<TwitterUserInfo> twitterUserInfoSerde = SerdeFactory.createSerde(TwitterUserInfo.class, serdeProps);
+    private final Serde<TwitterUserMessage> twitterUserMessageSerde = SerdeFactory.createSerde(TwitterUserMessage.class, serdeProps);
     private final Serde<String> stringSerde = Serdes.String();
     private final Serde<Long> longSerde = Serdes.Long();
 
@@ -64,45 +67,54 @@ public class UsersTopology implements CommandLineRunner {
 
         // Simply read the stream
         final KStream<String, TwitterStatus> twitterStream = builder.stream(
-                TWITTER_TOPIC,
-                Consumed.with(stringSerde, twitterStatusSerde)
+            TWITTER_TOPIC,
+            Consumed.with(stringSerde, twitterStatusSerde)
         );
 //        twitterStream.print(Printed.toSysOut());
 
-
-        //Construct a state store to hold all the users in the store
-        final KTable<String, TwitterUserInfo> usersTable = builder
-                .table(
-                        USER_FEED,
-                        Consumed.with(stringSerde, twitterUserInfoSerde),
-                        Materialized.as(ALL_USERS)
+        // Feed the user-message topic
+        twitterStream
+            .map((key, twitterStatus) -> {
+                TwitterUserMessage userMessage = new TwitterUserMessage(
+                    twitterStatus.getUser().getScreenName(),
+                    twitterStatus.getText()
                 );
+                return KeyValue.pair(twitterStatus.getUser().getScreenName(), userMessage);
+            })
+            .to(USER_MESSAGE, Produced.with(stringSerde, twitterUserMessageSerde));
 
         //Feed the user store
         twitterStream
-                .map((key, twitterStatus) -> {
-                    TwitterUserInfo userInfo = new TwitterUserInfo(
-                            twitterStatus.getUser().getScreenName(),
-                            twitterStatus.getUser().getProfileImageURL()
-                    );
-                    return KeyValue.pair(twitterStatus.getUser().getScreenName(), userInfo);
-                })
-                .to(USER_FEED, Produced.with(stringSerde, twitterUserInfoSerde));
+            .map((key, twitterStatus) -> {
+                TwitterUserInfo userInfo = new TwitterUserInfo(
+                    twitterStatus.getUser().getScreenName(),
+                    twitterStatus.getUser().getProfileImageURL()
+                );
+                return KeyValue.pair(twitterStatus.getUser().getScreenName(), userInfo);
+            })
+            .to(USER_FEED, Produced.with(stringSerde, twitterUserInfoSerde));
 
+        //Construct a state store to hold all the users in the store
+        final KTable<String, TwitterUserInfo> usersTable = builder
+            .table(
+                USER_FEED,
+                Consumed.with(stringSerde, twitterUserInfoSerde),
+                Materialized.as(ALL_USERS)
+            );
 
         //Join the tweet streams with our user state store to return a user with his tweets count
         final KStream<String, TwitterUserInfo> joinedStream = twitterStream
-                .groupBy((key, twitterStatus) -> twitterStatus.getUser().getScreenName(), Serialized.with(stringSerde, twitterStatusSerde))
-                .count(Materialized.as(TWEET_PER_USER))
-                .toStream()
-                .leftJoin(
-                        usersTable,
-                        (count, twitterUserInfo) -> {
-                            twitterUserInfo.setTweetCount(count);
-                            return twitterUserInfo;
-                        },
-                        Joined.with(stringSerde, longSerde, twitterUserInfoSerde)
-                );
+            .groupBy((key, twitterStatus) -> twitterStatus.getUser().getScreenName(), Serialized.with(stringSerde, twitterStatusSerde))
+            .count(Materialized.as(TWEET_PER_USER))
+            .toStream()
+            .leftJoin(
+                usersTable,
+                (count, twitterUserInfo) -> {
+                    twitterUserInfo.setTweetCount(count);
+                    return twitterUserInfo;
+                },
+                Joined.with(stringSerde, longSerde, twitterUserInfoSerde)
+            );
 
         joinedStream.to(USERS_TOPIC, Produced.with(stringSerde, twitterUserInfoSerde));
 

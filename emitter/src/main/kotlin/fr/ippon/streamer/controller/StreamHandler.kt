@@ -21,7 +21,9 @@ class StreamHandler(val kafkaConsumer: Consumer, val simpleConsumer: SimpleConsu
     fun userStream(req: ServerRequest): Mono<ServerResponse> = ok()
             .bodyToServerSentEvents(kafkaConsumer.usersStream)
 
+    fun userMessageConsumer(req: ServerRequest): Mono<ServerResponse> = ok()
+            .bodyToServerSentEvents(kafkaConsumer.userMessageStream)
+
     fun basicConsumer(req: ServerRequest): Mono<ServerResponse> = ok()
             .bodyToServerSentEvents(simpleConsumer.basicConsumerStream)
-
 }

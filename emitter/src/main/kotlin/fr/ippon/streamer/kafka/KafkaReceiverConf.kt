@@ -18,6 +18,7 @@ class KafkaReceiverConf {
     private val SOUNDS = "sounds"
     private val CHARTS = "charts"
     private val USERS = "users"
+    private val USER_MESSAGE = "user-message"
 
     @Bean(name = ["soundsReceiver"])
     fun soundsReceiver(): Flux<ReceiverRecord<String, String>> {
@@ -64,5 +65,19 @@ class KafkaReceiverConf {
         return KafkaReceiver.create(options).receive()
     }
 
+    @Bean(name = ["userMessageReceiver"])
+    fun userMessageReceiver(): Flux<ReceiverRecord<String, String>> {
+        val props: Map<String, Any> = mapOf(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServer,
+                ConsumerConfig.GROUP_ID_CONFIG to groupID,
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java
+        )
+        val options = ReceiverOptions
+                .create<String, String>(props)
+                .subscription(setOf(USER_MESSAGE))
+                .addAssignListener { p -> p.forEach(ReceiverPartition::seekToEnd) }
+        return KafkaReceiver.create(options).receive()
+    }
 
 }

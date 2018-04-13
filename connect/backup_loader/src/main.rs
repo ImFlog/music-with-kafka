@@ -9,7 +9,7 @@ use std::path::Path;
 use std::process::Command;
 
 const SOURCES: [&'static str; 3] = ["iphone", "web", "android"];
-const TEXTS: [&'static str; 8] = [
+const TEXTS: [&'static str; 9] = [
     "Give me some drum #musicwithkafka",
     "I want some heavy bass #musicwithkafka",
     "I want some lead_bass #musicwithkafka",
@@ -18,6 +18,7 @@ const TEXTS: [&'static str; 8] = [
     "And a pad ? #musicwithkafka",
     "And synth ? #musicwithkafka",
     "Vocal ftw ! #musicwithkafka",
+    "Osef ftw ! #musicwithkafka",
 ];
 const USERS: [(&'static str, &'static str); 10] = [
     ("monty", "https://static.boredpanda.com/blog/wp-content/uploads/2014/11/most-popular-cats-monty-2.jpg"),

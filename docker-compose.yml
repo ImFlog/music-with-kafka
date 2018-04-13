@@ -35,6 +35,7 @@ services:
                        kafka-topics --create --topic users --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181 && \
                        kafka-topics --create --topic user-feed --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181 && \
                        kafka-topics --create --topic sounds --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181 && \
+                       kafka-topics --create --topic user-message --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181 && \
                        echo Waiting a few seconds for topic creation to finish... && \
                        sleep 2'"
     extra_hosts:

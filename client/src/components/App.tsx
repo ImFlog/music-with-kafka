@@ -11,6 +11,7 @@ import MusicChart from "../beans/MusicChart";
 import MusicChartService from "../services/MusicChartService";
 import MusicChartEvent from "../beans/MusicChartEvent";
 import * as NotificationSystem from "react-notification-system";
+import UserMessage from "../beans/UserMessage";
 
 const musicCharts: MusicChart[] = [
   new MusicChart("sound1", 12),
@@ -33,6 +34,7 @@ const testUsers: TwitterUser[] = [
 const sseSounds = new EventSource('http://localhost:8090/stream/sounds');
 const sseUsers = new EventSource('http://localhost:8090/stream/users');
 const sseCharts = new EventSource('http://localhost:8090/stream/charts');
+const sseUserMessage = new EventSource('http://localhost:8090/stream/user-message');
 
 export interface AppProps { }
 
@@ -59,15 +61,21 @@ class App extends React.Component<AppProps, undefined> {
       const musicChartEvent: MusicChartEvent = JSON.parse(event.data);
       MusicChartService.updateCharts(musicChartEvent.charts);
     }
+
+    sseUserMessage.onmessage = (event) => {
+      const userMessage: UserMessage = JSON.parse(event.data);
+      this.addNotification(userMessage);
+    }
   }
 
-  private addNotification(user: TwitterUser) {
+  private addNotification(message: UserMessage) {
     if (this._notificationSystem.state.notifications.length >= 5) {
       this._notificationSystem.state.notifications.shift()
     }
 
     this._notificationSystem.addNotification({
-      message: 'Notification message',
+      title: message.name,
+      message: message.message,
       level: 'info',
       dismissible: false
     })
