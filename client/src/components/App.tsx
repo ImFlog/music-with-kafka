@@ -10,6 +10,7 @@ import MusicCharts from "./MusicCharts";
 import MusicChart from "../beans/MusicChart";
 import MusicChartService from "../services/MusicChartService";
 import MusicChartEvent from "../beans/MusicChartEvent";
+import * as NotificationSystem from "react-notification-system";
 
 const musicCharts: MusicChart[] = [
   new MusicChart("sound1", 12),
@@ -37,6 +38,7 @@ export interface AppProps { }
 
 class App extends React.Component<AppProps, undefined> {
   count = 0;
+  _notificationSystem: NotificationSystem.System;
 
   componentDidMount() {
     // Only for testing
@@ -59,6 +61,18 @@ class App extends React.Component<AppProps, undefined> {
     }
   }
 
+  private addNotification(user: TwitterUser) {
+    if (this._notificationSystem.state.notifications.length >= 5) {
+      this._notificationSystem.state.notifications.shift()
+    }
+
+    this._notificationSystem.addNotification({
+      message: 'Notification message',
+      level: 'info',
+      dismissible: false
+    })
+  }
+
   private playMusic(evt: React.KeyboardEvent<HTMLInputElement>) {
     if (evt.which === 13) {
       MusicPlayer.processMusic(new MusicEvent(evt.currentTarget.value.split(",")));
@@ -78,7 +92,7 @@ class App extends React.Component<AppProps, undefined> {
     return (
       <div style={styles.appStyle}>
         <div style={styles.tweetStyle}>
-          <h1>Top Twittos </h1>
+          <h1>Top Twittos</h1>
           <TwitterUserList twitterUsers={TwitterUserService.users} />
         </div>
 
@@ -89,6 +103,9 @@ class App extends React.Component<AppProps, undefined> {
         <div style={styles.chartStyle}>
           <MusicCharts musicCharts={MusicChartService.musicCharts} />
         </div>
+        <h1>Available Categories</h1>
+        <h2>drum  |  heavy_bass  |  lead_bass  |  line_bass  |  melody  |  pad  |  synth  |  vocal</h2>
+        <NotificationSystem ref={(ref: any) => this._notificationSystem = ref} />
       </div>
     );
   }
