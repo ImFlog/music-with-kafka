@@ -12,21 +12,14 @@ vocal\
      ... 
 3. Launch Kafka and create the needed topics :
 ```
-# Start Kafka
-sudo docker-compose up -d kafka
-
-# Create topics
-sudo docker-compose exec kafka kafka-topics --create --topic twitter_json --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
-sudo docker-compose exec kafka kafka-topics --create --topic users --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
-sudo docker-compose exec kafka kafka-topics --create --topic user-feed --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
-sudo docker-compose exec kafka kafka-topics --create --topic sounds --partitions 1 --replication-factor 1 --if-not-exists --zookeeper localhost:2181
+sudo docker-compose up -d topic
 ```
 
 ## Kafka Connect
 We are using the [kafka-connect-twitter connector](https://github.com/jcustenborder/kafka-connect-twitter).
 
 1. Change connect/twitter.json to add your twitter tokens (use [twitter app manager](https://apps.twitter.com/))
-2. Launch the docker container with `sudo docker-compose up connect`
+2. Launch the docker container with `sudo docker-compose up -d connect`
 3. You can now interact with the REST API to manage your running connectors. i.e :
 ```
 # Retrieve the available connectors
@@ -36,7 +29,7 @@ curl http://localhost:8082/connector-plugins | jq
 curl http://localhost:8082/connectors | jq
 ```
 4. Using curl you can now start the twitter connector with the following command:
-`$ curl -X POST -H "Content-Type: application/json" --data-binary @connect/twitter.json localhost:8082/connectors`
+`$ curl -X POST -H "Content-Type: application/json" --data-binary @connect/twitter.json localhost:8082/connectors | jq`
 
 Everything is ready ! You are now listening to #mwk on twitter !
 
@@ -44,7 +37,7 @@ For testing purpose, you can run the loader_script located in /connect. It will 
 
 ## Kafka Streams
 1. Launch the streaming application `streams/gradlew build && streams/gradlew bootRun`
-2. You can check the messages are correctly written in your topic using `$KAFKA_HOME/bin/kafka-console-consumer.sh --topic sounds --bootstrap-server localhost:9092 --property "print.key=true"`
+2. You can check the messages are correctly written in your topic using `$KAFKA_HOME/bin/kafka-console-consumer.sh --topic sounds --bootstrap-server localhost:9092 --property "print.key=true" | jq`
 
 ## Emitter (SSE toward the frontend)
 The Emitter is a simple bridge between the Client and Kafka Streams. 
