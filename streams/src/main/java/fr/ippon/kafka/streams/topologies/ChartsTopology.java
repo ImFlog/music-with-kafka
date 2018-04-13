@@ -62,6 +62,7 @@ public class ChartsTopology implements CommandLineRunner {
 
         // 2. Group the stream by categories during the WINDOWING_TIME
         final KTable<Windowed<String>, Long> chartCount = twitterStream
+                .filter((key, value) -> !Audio.UNKNOW.equalsIgnoreCase(Audio.findCategory(value, categories)))
                 .groupBy((key, value) -> Audio.findCategory(value, categories),
                         Serialized.with(Serdes.String(), twitterStatusSerde))
                 .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME)))// Tumbling windowing

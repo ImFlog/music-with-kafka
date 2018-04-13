@@ -43,14 +43,9 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
             System.out.println("Schedule Task !");
             this.context.schedule(INTERVAL, PunctuationType.WALL_CLOCK_TIME, getPunctuator());
         }
-
         final String category = Audio.findCategory(twitterStatus, categories);
-        System.out.println("Adding " + category + " to state store");
-        final Long count = this.kvStore.get(category);
-        if (null != count) {
-            this.kvStore.put(category, count + 1L);
-        } else {
-            this.kvStore.put(category, 1L);
+        if (!Audio.UNKNOW.equalsIgnoreCase(category)) {
+            updateStateStore(category);
         }
     }
 
@@ -62,6 +57,16 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
     @Override
     public void close() {
         //release
+    }
+
+    private void updateStateStore(String category) {
+        System.out.println("Adding " + category + " to state store");
+        final Long count = this.kvStore.get(category);
+        if (null != count) {
+            this.kvStore.put(category, count + 1L);
+        } else {
+            this.kvStore.put(category, 1L);
+        }
     }
 
     private Punctuator getPunctuator() {

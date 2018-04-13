@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public final class Audio {
 
+    public static final String UNKNOW = "unknow";
+
     /**
      * Read audio directory and count the number of .ogg files in each directory.
      * The string will be used to split tweets.
@@ -39,14 +41,14 @@ public final class Audio {
      *
      * @param value      Tweet
      * @param categories Map of available categories
-     * @return The category key if found. Null if not
+     * @return The category key if found. Unknow if not
      */
     public static String findCategory(TwitterStatus value, Categories categories) {
         return categories
                 .toStream()
                 .filter(category -> matchCategory(category, value))
                 .findFirst()
-                .orElse(null);
+                .orElse(UNKNOW);
     }
 
     /**
