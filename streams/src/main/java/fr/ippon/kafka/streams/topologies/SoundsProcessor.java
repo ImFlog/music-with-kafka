@@ -24,25 +24,21 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
     private static final int INTERVAL = 30000;
     private static final String TOPS = "TOPS";
     private static final int MAX_SIZE = 5;
+    private final Categories categories = Audio.retrieveAvailableCategories();
     private boolean isLaunched = false;
     private ProcessorContext context;
     private KeyValueStore<String, Long> kvStore;
-    private final Categories categories = Audio.retrieveAvailableCategories();
 
     @Override
     @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
         this.context = context;
-        kvStore = (KeyValueStore) context.getStateStore(TOP_SONG);
+        this.kvStore = (KeyValueStore) context.getStateStore(TOP_SONG);
+        context.schedule(INTERVAL, PunctuationType.WALL_CLOCK_TIME, getPunctuator());
     }
 
     @Override
     public void process(String key, TwitterStatus twitterStatus) {
-        if (!isLaunched) {
-            isLaunched = true;
-            System.out.println("Schedule Task !");
-            this.context.schedule(INTERVAL, PunctuationType.WALL_CLOCK_TIME, getPunctuator());
-        }
         final String category = Audio.findCategory(twitterStatus, categories);
         if (!Audio.UNKNOW.equalsIgnoreCase(category)) {
             updateStateStore(category);
@@ -70,6 +66,7 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
     }
 
     private Punctuator getPunctuator() {
+        System.out.println("Punctuator for sound");
         Comparator<KeyValue<String, Long>> comparator = Comparator.comparingLong(kv -> kv.value);
         Function<KeyValueStore<String, Long>, SoundMessage> messageGenerator = soundMessageGenerator(comparator);
         return timestamp -> {

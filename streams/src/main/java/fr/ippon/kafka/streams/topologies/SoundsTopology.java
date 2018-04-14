@@ -6,7 +6,6 @@ import fr.ippon.kafka.streams.domains.TwitterStatus;
 import fr.ippon.kafka.streams.serdes.SerdeException;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
 import fr.ippon.kafka.streams.utils.Commons;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -39,6 +38,35 @@ public class SoundsTopology implements CommandLineRunner {
 
     private KafkaStreams streams;
 
+    /**
+     * Init stream properties.
+     *
+     * @return the created stream settings.
+     */
+    private static StreamsConfig kStreamConfig() {
+
+        Properties settings = new Properties();
+        // Application ID, used for consumer groups
+        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_ID_VALUE);
+        // Kafka bootstrap server (broker to talk to)
+        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS_VALUE);
+
+        // default serdes for serializing and deserializing key and value from and to streams
+        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+
+        //ignore deserialization exception
+        settings.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, SerdeException.class);
+
+
+        // Enable exactly once
+//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+
+        // We can also set Consumer properties
+//        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, AUTO_OFFSET_VALUE);
+        return new StreamsConfig(settings);
+    }
+
     @Override
     public void run(String... args) {
 
@@ -68,7 +96,7 @@ public class SoundsTopology implements CommandLineRunner {
                 .addStateStore(keyValueStoreStoreBuilder, PROCESS_NODE)
                 .addSink(SINK_NODE, SOUNDS_TOPIC, stringSerde.serializer(), soundMessageSerde.serializer(), PROCESS_NODE);
 
-        
+
         streams = new KafkaStreams(topology, config);
 
 
@@ -103,35 +131,6 @@ public class SoundsTopology implements CommandLineRunner {
 
     private ReadOnlyWindowStore<String, Long> getTweetsStore() {
         return streams.store(TWEET_PER_CATEGORY, QueryableStoreTypes.windowStore());
-    }
-
-    /**
-     * Init stream properties.
-     *
-     * @return the created stream settings.
-     */
-    private static StreamsConfig kStreamConfig() {
-
-        Properties settings = new Properties();
-        // Application ID, used for consumer groups
-        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_ID_VALUE);
-        // Kafka bootstrap server (broker to talk to)
-        settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS_VALUE);
-
-        // default serdes for serializing and deserializing key and value from and to streams
-        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-        settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-
-        //ignore deserialization exception
-        settings.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, SerdeException.class);
-
-
-        // Enable exactly once
-//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
-
-        // We can also set Consumer properties
-        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, AUTO_OFFSET_VALUE);
-        return new StreamsConfig(settings);
     }
 
 }

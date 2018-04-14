@@ -22,7 +22,7 @@ public final class Commons {
     }
 
     public static String milliToDateString(long value) {
-        return  LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.systemDefault()).toString();
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.systemDefault()).toString();
     }
 
 }

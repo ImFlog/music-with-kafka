@@ -4,37 +4,30 @@ import fr.ippon.kafka.streams.domains.*;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
 import fr.ippon.kafka.streams.serdes.WindowedSerde;
 import fr.ippon.kafka.streams.utils.Audio;
-import fr.ippon.kafka.streams.utils.Commons;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.Consumed;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.TimestampExtractor;
 import org.apache.kafka.streams.processor.WallclockTimestampExtractor;
-import org.apache.kafka.streams.state.*;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import static fr.ippon.kafka.streams.utils.Const.*;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
 
 @Component
-/**
- * Count tweets for a given category in a shorter window (WINDOWING_CHARTS_TIME).
- * Send them to the CHARTS_TOPIC
- */
 public class ChartsTopology implements CommandLineRunner {
-
-    private KafkaStreams streams;
 
     // Define custom serdes
     private final Map<String, Object> serdeProps = new HashMap<>();
@@ -45,96 +38,12 @@ public class ChartsTopology implements CommandLineRunner {
     private final Serde<String> stringSerde = Serdes.String();
     private final Serde<Windowed<String>> windowedSerde = new WindowedSerde<>(stringSerde);
     private final Serde<Long> longSerde = Serdes.Long();
+    private KafkaStreams stream;
 
-
-    @Override
-    public void run(String... args) {
-        // Create an instance of StreamsConfig from the Properties instance
-        StreamsConfig config = kStreamConfig();
-        StreamsBuilder streamsBuilder = new StreamsBuilder();
-
-        Categories categories = Audio.retrieveAvailableCategories();
-
-
-        final KStream<String, TwitterStatus> twitterStream = streamsBuilder
-                .stream(TWITTER_TOPIC, Consumed.with(stringSerde, twitterStatusSerde));
-
-
-        // 2. Group the stream by categories during the WINDOWING_TIME
-        final KTable<Windowed<String>, Long> chartCount = twitterStream
-                .filter((key, value) -> !Audio.UNKNOW.equalsIgnoreCase(Audio.findCategory(value, categories)))
-                .groupBy((key, value) -> Audio.findCategory(value, categories),
-                        Serialized.with(Serdes.String(), twitterStatusSerde))
-                .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(WINDOWING_TIME)))// Tumbling windowing
-                .count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as(CHART_PER_CATEGORY)
-                        .withKeySerde(stringSerde)
-                        .withValueSerde(longSerde));
-
-
-        chartCount
-                .groupBy((windowedKey, count) -> {
-                    Windowed<String> windowed = new Windowed<>("CHARTS", windowedKey.window());
-                    return KeyValue.pair(windowed, new Chart(windowedKey.key(), count));
-                }, Serialized.with(windowedSerde, chartSerde))
-                .aggregate(
-                        Charts::new,
-                        (key, value, aggregate) -> {
-                            aggregate.add(value);
-                            return aggregate;
-                        },
-                        (key, value, aggregate) -> {
-                            aggregate.remove(value);
-                            return aggregate;
-                        },
-                        Materialized.<Windowed<String>, Charts, KeyValueStore<Bytes, byte[]>>as("chartsSong")
-                                .withValueSerde(chartsSerde)
-                )
-                .mapValues(charts -> charts.toStream().collect(collectingAndThen(toList(), ChartMessage::new)))
-                .toStream()
-                .map((windowedKey, value) -> KeyValue.pair(windowedKey.key(), value))
-                .to(CHARTS_TOPIC, Produced.with(stringSerde, messageSerde));
-
-        streams = new KafkaStreams(streamsBuilder.build(), config);
-        // Clean local store between runs
-        streams.cleanUp();
-        streams.start();
-    }
-
-    @PreDestroy
-    public void destroy() {
-        streams.close();
-    }
-
-    public Stream<Chart> getLastChartSong() {
-        return Commons.iteratorToStream(chartsSong().all())
-                .max(Comparator.comparingLong(kv -> kv.key.window().start()))
-                .map(kv -> kv.value)
-                .orElseGet(Charts::new)
-                .toStream();
-    }
-
-    public Stream<KeyValue<Long, Long>> getChartsCountPerCategories(String category) {
-        WindowStoreIterator<Long> it = chartsPerCategory().fetch(category, 0, System.currentTimeMillis());
-        return Commons.iteratorToStream(it);
-    }
-
-    private ReadOnlyWindowStore<String, Long> chartsPerCategory() {
-        return streams.store(CHART_PER_CATEGORY, QueryableStoreTypes.windowStore());
-    }
-
-    private ReadOnlyKeyValueStore<Windowed<String>, Charts> chartsSong() {
-        return streams.store("chartsSong", QueryableStoreTypes.keyValueStore());
-    }
-
-    /**
-     * Init stream properties.
-     *
-     * @return the created stream settings.
-     */
     private static StreamsConfig kStreamConfig() {
         Properties settings = new Properties();
         // Application ID, used for consumer groups
-        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "ChartsTopology");
+        settings.put(StreamsConfig.APPLICATION_ID_CONFIG, "ChartsTopology2");
         // Kafka bootstrap server (broker to talk to)
         settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 
@@ -150,8 +59,77 @@ public class ChartsTopology implements CommandLineRunner {
 //        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
 
         // We can also set Consumer properties
-        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+//        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         return new StreamsConfig(settings);
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+
+        // Create an instance of StreamsConfig from the Properties instance
+        StreamsConfig config = kStreamConfig();
+        StreamsBuilder streamsBuilder = new StreamsBuilder();
+
+        Categories categories = Audio.retrieveAvailableCategories();
+
+        final KStream<String, TwitterStatus> twitterStream = streamsBuilder
+                .stream(TWITTER_TOPIC, Consumed.with(stringSerde, twitterStatusSerde));
+
+        StoreBuilder<KeyValueStore<String, Chart>> valueStoreBuilder = Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore("chartsSong"),
+                stringSerde,
+                chartSerde
+        );
+
+
+        streamsBuilder.addStateStore(valueStoreBuilder);
+
+        // 2. Group the stream by categories during the WINDOWING_TIME
+        final KTable<String, Long> chartCount = twitterStream
+                .filter((key, value) -> !Audio.UNKNOW.equalsIgnoreCase(Audio.findCategory(value, categories)))
+                .groupBy((key, value) -> Audio.findCategory(value, categories),
+                        Serialized.with(stringSerde, twitterStatusSerde))
+                .count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as(CHART_PER_CATEGORY)
+                        .withKeySerde(stringSerde)
+                        .withValueSerde(longSerde));
+
+        chartCount
+                .toStream()
+                .transform(ChartsTransformer::new, CHART_PER_CATEGORY)
+                .to(CHARTS_TOPIC, Produced.with(stringSerde, messageSerde));
+
+        stream = new KafkaStreams(streamsBuilder.build(), config);
+
+        stream.cleanUp();
+        stream.start();
+
+
+    }
+
+//    public Stream<Chart> getLastChartSong() {
+//        return Commons.iteratorToStream(chartsSong().all())
+//                .max(Comparator.comparingLong(kv -> kv.key.window().start()))
+//                .map(kv -> kv.value)
+//                .orElseGet(Charts::new)
+//                .toStream();
+//    }
+//
+//    public Stream<KeyValue<Long, Long>> getChartsCountPerCategories(String category) {
+//        WindowStoreIterator<Long> it = chartsPerCategory().fetch(category, 0, System.currentTimeMillis());
+//        return Commons.iteratorToStream(it);
+//    }
+//
+//    private ReadOnlyWindowStore<String, Long> chartsPerCategory() {
+//        return stream.store(CHART_PER_CATEGORY, QueryableStoreTypes.windowStore());
+//    }
+//
+//    private ReadOnlyKeyValueStore<Windowed<String>, Charts> chartsSong() {
+//        return stream.store("chartsSong", QueryableStoreTypes.keyValueStore());
+//    }
+
+    @PreDestroy
+    public void destroy() {
+        stream.close();
     }
 
 }
