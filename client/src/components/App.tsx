@@ -49,7 +49,8 @@ class App extends React.Component<AppProps, undefined> {
 
     sseSounds.onmessage = (event) => {
       const musicEvent: MusicEvent = JSON.parse(event.data);
-      MusicPlayer.processMusic(musicEvent)
+      MusicPlayer.processMusic(musicEvent);
+      MusicChartService.cleanCharts();
     }
 
     sseUsers.onmessage = (event) => {

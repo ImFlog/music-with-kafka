@@ -9,6 +9,10 @@ class MusicChartService {
 
         this.musicCharts.replace(newCharts);
     }
+
+    cleanCharts() {
+        this.musicCharts.clear()
+    }
 }
 
 export default new MusicChartService
