@@ -45,14 +45,14 @@ The Emitter is a simple bridge between the Client and Kafka Streams.
 It's consuming the 3 topics (sounds / user-feed / users) and simply redirects messages to the client via Server Sent Events (SSE)
 
 To start the emitter application :
-`./gradlew build && ./gradlew bootRun`
+`emitter/gradlew build && emitter/gradlew bootRun`
 
 ## Client
 Client app will listen for incoming message from the emitter app by using SSE mechanism.
 You need to provide ogg audio files in (client/audio) in order to play music. (See Prerequisites)
 
 To start the client :
-`yarn install && yarn start`
+`cd client && yarn install && yarn start`
 
 ## KSQL
 1. Launch KSQL `sudo docker-compose up -d ksql`
