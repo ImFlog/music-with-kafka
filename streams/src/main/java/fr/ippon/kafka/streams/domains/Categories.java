@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 public class Categories {
 
     private final Map<String, Integer> categoryMap = new HashMap<>();
-    private Map<String, Queue<Integer>> previousRandom = new HashMap<>();
+    private final Map<String, Queue<Integer>> previousRandom = new HashMap<>();
 
     public Integer fetchRandomIndex(String key) {
         Queue<Integer> queue = previousRandom.get(key);
