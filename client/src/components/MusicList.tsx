@@ -1,6 +1,9 @@
 import * as React from "react";
 import { observer } from "mobx-react";
 import { Music, MUSIC_STATE } from '../beans/Music';
+import Card, { CardContent } from 'material-ui/Card';
+import Typography from 'material-ui/Typography';
+import Grid from 'material-ui/Grid';
 
 export interface MusicListProps {
   musics: Music[]
@@ -19,14 +22,32 @@ export default class MusicList extends React.Component<MusicListProps, undefined
     ));
     return (
       <div>
-        <div style={styles.inProgressStyle}>
-          <h1>Music in progress</h1>
-          <p style={styles.musicStyle}>{musics}</p>
-        </div>
-        <div style={styles.incomingStyle}>
-          <h1>Next Music</h1>
-          <p style={styles.musicStyle}>{incomingMusics}</p>
-        </div>
+        <Grid container spacing={24}>
+          <Grid item sm={6}>
+            <Card style={styles.container}>
+              <CardContent>
+                <Typography variant="headline" component="h1">
+                  Music in progress
+                </Typography>
+                <Typography style={styles.musicStyle} color="textSecondary">
+                  {musics}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item sm={6}>
+            <Card style={styles.container}>
+              <CardContent>
+                <Typography variant="headline" component="h1">
+                  Next Music
+                </Typography>
+                <Typography style={styles.musicStyle} color="textSecondary">
+                  {incomingMusics}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
       </div>
     );
   }
@@ -34,18 +55,10 @@ export default class MusicList extends React.Component<MusicListProps, undefined
 }
 
 const styles = {
-  inProgressStyle: {
-    width: '45%',
-    float: 'left'
-  },
-  incomingStyle: {
-    marginLeft: '5%',
-    float: 'left',
-    width: '45%'
-  },
   musicStyle: {
-    borderLeft: '6px solid #005580',
-    backgroundColor: '#e6f7ff',
-    width: '90%'
+    fontSize: '19px'
+  },
+  container: {
+    height: '250px'
   }
 }

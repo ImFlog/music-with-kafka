@@ -4,6 +4,9 @@ import { Bar, ChartData } from 'react-chartjs-2';
 import MusicChart from '../beans/MusicChart';
 import { observer } from 'mobx-react';
 import { ChartDataSets, ChartData as ChartDataJs, ChartColor, ChartOptions } from 'chart.js';
+import Paper from 'material-ui/Paper';
+import Typography from 'material-ui/Typography';
+import Card, { CardContent } from 'material-ui/Card';
 
 const defaultColor: ChartColor = 'rgba(255,99,132,0.2)'
 const defaultBorderColor: ChartColor = 'rgba(255,99,132,1)'
@@ -64,13 +67,19 @@ export default class MusicCharts extends React.Component<MusicChartsProps, undef
         const data = this.buildChartData();
         return (
             <div>
-                <h2>Sounds votes for the next music</h2>
-                <Bar
-                    data={data}
-                    width={40}
-                    height={10}
-                    options={options}
-                />
+                <Card>
+                    <CardContent>
+                        <Typography variant="headline" component="h1">
+                            Sounds votes for the next music
+                        </Typography>
+                        <Bar
+                            data={data}
+                            width={40}
+                            height={10}
+                            options={options}
+                        />
+                    </CardContent>
+                </Card>
             </div>
         );
     }

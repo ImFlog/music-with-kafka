@@ -1,6 +1,7 @@
 const { resolve } = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const HtmlWebpackIncludeAssetsPlugin = require('html-webpack-include-assets-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 module.exports = {
@@ -31,7 +32,17 @@ module.exports = {
     new HtmlWebpackPlugin({
       title: 'Music With Kafka'
     }),
+    new HtmlWebpackIncludeAssetsPlugin({
+      append: true,
+      assets: [
+        '/css/style.css',
+        { path: 'https://fonts.googleapis.com/css?family=Roboto:300', type: 'css' },
+        { path: 'https://fonts.googleapis.com/icon?family=Material+Icons', type: 'css' }
+      ],
+      publicPath: ''
+    }),
     new CopyWebpackPlugin([
+      { from: '../assets/css', to: resolve(__dirname, 'dist/css/') },
       { from: '../../audio', to: resolve(__dirname, 'dist/audio') }
     ])
   ],

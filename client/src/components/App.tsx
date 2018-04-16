@@ -12,6 +12,12 @@ import MusicChartService from "../services/MusicChartService";
 import MusicChartEvent from "../beans/MusicChartEvent";
 import * as NotificationSystem from "react-notification-system";
 import UserMessage from "../beans/UserMessage";
+import { withStyles } from 'material-ui/styles';
+import AppBar from 'material-ui/AppBar';
+import Toolbar from 'material-ui/Toolbar';
+import Typography from 'material-ui/Typography';
+import Card, { CardContent } from 'material-ui/Card';
+import Grid from 'material-ui/Grid';
 
 const musicCharts: MusicChart[] = [
   new MusicChart("sound1", 12),
@@ -99,36 +105,79 @@ class App extends React.Component<AppProps, undefined> {
 
   render() {
     return (
-      <div style={styles.appStyle}>
-        <div style={styles.tweetStyle}>
-          <h1>Top Twittos</h1>
-          <TwitterUserList twitterUsers={TwitterUserService.users} />
-        </div>
+      <div style={styles.root}>
+      <AppBar position="static" color="primary">
+        <Toolbar>
+          <Typography variant="title" color="inherit">
+            Music w/ Kafka
+          </Typography>
+        </Toolbar>
+      </AppBar>
 
-        <div style={styles.musicStyle}>
-          <MusicList musics={MusicPlayer.musics} incomingMusics={MusicPlayer.incomingMusics} />
-        </div>
 
-        <div style={styles.chartStyle}>
-          <MusicCharts musicCharts={MusicChartService.musicCharts} />
-        </div>
-        <h1>Available Categories</h1>
-        <h2>drum  |  heavy_bass  |  lead_bass  |  line_bass  |  melody  |  pad  |  synth  |  vocal</h2>
-        <NotificationSystem ref={(ref: any) => this._notificationSystem = ref} />
+      <Grid style={styles.container} container spacing={24}>
+        <Grid item xs={12} sm={4}>
+            <Card style={styles.tweetStyle}>
+              <CardContent>
+                <Typography variant="headline" component="h1">
+                  Top Twittos
+                </Typography>
+                <TwitterUserList twitterUsers={TwitterUserService.users} />
+              </CardContent>
+            </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={8}>
+          <Grid container spacing={24}>
+            <Grid item sm={11}>
+              <MusicList musics={MusicPlayer.musics} incomingMusics={MusicPlayer.incomingMusics} />
+            </Grid>
+          </Grid>
+          <Grid container spacing={24}>
+            <Grid item sm={11}>
+              <MusicCharts musicCharts={MusicChartService.musicCharts} />
+            </Grid>
+          </Grid>
+        </Grid>
+
+      </Grid>
+
+
+      <Grid style={styles.container} container spacing={24}>
+        <Grid item sm={4}></Grid>
+        <Grid item sm={7}>
+          <Card>
+            <CardContent>
+              <Typography variant="headline" component="h1">
+                Available Categories
+              </Typography>
+              <h2>drum  |  heavy_bass  |  lead_bass  |  line_bass  |  melody  |  pad  |  synth  |  vocal</h2>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <NotificationSystem ref={(ref: any) => this._notificationSystem = ref} />
+  
       </div>
     );
   }
 }
 
 const styles = {
+  root: {
+    flexGrow: 1
+  },
+  container: {
+    margin: '10px'
+  },
   appStyle: {
     width: '90%',
     margin: 'auto',
     padding: '10px'
   },
   tweetStyle: {
-    width: '15%',
-    float: 'left'
+    height: '600px'
   },
   musicStyle: {
     marginLeft: '40%'
@@ -136,6 +185,9 @@ const styles = {
   chartStyle: {
     marginTop: '13%',
     marginLeft: '40%'
+  },
+  card: {
+    minWidth: 275
   }
 }
 
