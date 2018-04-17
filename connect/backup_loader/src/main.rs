@@ -1,12 +1,13 @@
+extern crate kafka;
 extern crate rand;
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{thread, time};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-use std::process::Command;
+use kafka::producer::{Producer, Record, RequiredAcks};
 
 const SOURCES: [&'static str; 3] = ["iphone", "web", "android"];
 const TEXTS: [&'static str; 9] = [
@@ -33,36 +34,31 @@ const USERS: [(&'static str, &'static str); 10] = [
     ("hamilton", "https://static.boredpanda.com/blog/wp-content/uploads/2014/11/most-popular-cats-hamilton-11__605.jpg")];
 
 fn main() {
+    let template = read_template_content();
+    let mut producer = match Producer::from_hosts(vec!["localhost:9092".to_owned()])
+        .with_ack_timeout(Duration::from_secs(1))
+        .with_required_acks(RequiredAcks::One)
+        .create()
+    {
+        Err(why) => panic!("couldn't start producer : {}", why.description()),
+        Ok(producer) => producer,
+    };
+
+    // Counter for ids
+    let mut count = 0;
     loop {
-        let tweet = build_tweet();
-        send_kafka_message(tweet);
+        let tweet = build_tweet(template.to_owned(), count);
+        let key = format!("{{\\\"Id\\\": {}}}", count);
+        count = count + 1;
+        match producer.send(&Record::from_key_value("twitter_json", key, tweet)) {
+            Err(why) => panic!("couldn't send message to Kafka : {}", why),
+            Ok(_) => (),
+        };
 
         // Wait between messages
         let sec = time::Duration::from_secs(1);
         thread::sleep(sec);
     }
-}
-
-// Retrieve tweet template and replace variables values
-fn build_tweet() -> String {
-    let mut template = read_template_content();
-
-    // Replace variable parts
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(n) => template = template.replace("${date}", &n.as_secs().to_string()),
-        Err(_) => panic!("SystemTime before UNIX EPOCH!"),
-    };
-
-    let random = rand::random::<usize>();
-    let source = random % SOURCES.len();
-    let user = random % USERS.len();
-    let text = random % TEXTS.len();
-
-    template = template.replace("${source}", SOURCES[source]);
-    template = template.replace("${text}", TEXTS[text]);
-    template = template.replace("${handler}", USERS[user].0);
-    template = template.replace("${imageUrl}", USERS[user].1);
-    return template;
 }
 
 fn read_template_content() -> String {
@@ -78,25 +74,27 @@ fn read_template_content() -> String {
         Err(why) => panic!("couldn't read {}: {}", display, why.description()),
         Ok(_) => (),
     };
-    s = format!("{{\\\"Id\\\": 1923792781}}&{}", s);
     return s;
 }
 
-/*
-TODO: we should find a way to reduce the cmd size
-*/
-fn send_kafka_message(tweet: String) {
-    let cmd = format!("echo -n \"{}\" | {}",
-    tweet,
-    "$KAFKA_HOME/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic twitter_json --property \"parse.key=true\" --property \"key.separator=&\"");
-    println!("sending {}", cmd);
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(cmd)
-        .output()
-        .expect("failed to execute process");
-    println!("status: {}", output.status);
-    if String::from_utf8_lossy(&output.stderr) != "" {
-        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-    }
+// Retrieve tweet template and replace variables values
+fn build_tweet(template: String, id: u64) -> String {
+    let mut result = template;
+    // Replace variable parts
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(n) => result = result.replace("${date}", &n.as_secs().to_string()),
+        Err(_) => panic!("SystemTime before UNIX EPOCH!"),
+    };
+
+    let random = rand::random::<usize>();
+    let source = random % SOURCES.len();
+    let user = random % USERS.len();
+    let text = random % TEXTS.len();
+
+    result = result.replace("${id}", &(id.to_string()));
+    result = result.replace("${source}", SOURCES[source]);
+    result = result.replace("${text}", TEXTS[text]);
+    result = result.replace("${handler}", USERS[user].0);
+    result = result.replace("${imageUrl}", USERS[user].1);
+    return result;
 }

@@ -37,7 +37,7 @@ For testing purpose, you can run the loader_script located in /connect. It will 
 
 ## Kafka Streams
 1. Launch the streaming application `streams/gradlew build && streams/gradlew bootRun`
-2. You can check the messages are correctly written in your topic using `$KAFKA_HOME/bin/kafka-console-consumer.sh --topic sounds --bootstrap-server localhost:9092 --property "print.key=true" | jq`
+2. You can check the messages are correctly written in your topic using `$KAFKA_HOME/bin/kafka-console-consumer.sh --topic sounds --bootstrap-server localhost:9092 --property "print.key=true"`
 
 ## Emitter (SSE toward the frontend)
 The Emitter is a simple bridge between the Client and Kafka Streams. 
