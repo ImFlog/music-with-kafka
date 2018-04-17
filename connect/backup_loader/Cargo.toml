@@ -5,4 +5,4 @@ authors = ["ImFlog <garcia.florian.perso@gmail.com>"]
 
 [dependencies]
 rand = "0.4"
-kafka = "0.7"
+rdkafka = "0.15.0"

@@ -1,19 +1,18 @@
 package fr.ippon.kafka.streams.topologies;
 
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toList;
+
 import fr.ippon.kafka.streams.domains.Chart;
 import fr.ippon.kafka.streams.domains.ChartMessage;
 import fr.ippon.kafka.streams.utils.Commons;
 import fr.ippon.kafka.streams.utils.Const;
+import java.util.Comparator;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.state.KeyValueStore;
-
-import java.util.Comparator;
-
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
 
 public class ChartsTransformer implements Transformer<String, Long, KeyValue<String, ChartMessage>> {
 
@@ -33,7 +32,6 @@ public class ChartsTransformer implements Transformer<String, Long, KeyValue<Str
             ChartMessage charts = Commons
                     .iteratorToStream(kvStore.all())
                     .sorted(comparator.reversed())
-                    .limit(5)
                     .map(kv -> new Chart(kv.key, kv.value))
                     .collect(collectingAndThen(toList(), ChartMessage::new));
             if (charts.getCharts().isEmpty()) {

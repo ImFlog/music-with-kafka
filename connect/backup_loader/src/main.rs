@@ -1,4 +1,4 @@
-extern crate kafka;
+extern crate rdkafka;
 extern crate rand;
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -7,7 +7,11 @@ use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-use kafka::producer::{Producer, Record, RequiredAcks};
+
+use rdkafka::config::ClientConfig;
+use rdkafka::producer::FutureProducer;
+use rdkafka::util::get_rdkafka_version;
+
 
 const SOURCES: [&'static str; 3] = ["iphone", "web", "android"];
 const TEXTS: [&'static str; 9] = [
@@ -35,25 +39,28 @@ const USERS: [(&'static str, &'static str); 10] = [
 
 fn main() {
     let template = read_template_content();
-    let mut producer = match Producer::from_hosts(vec!["localhost:9092".to_owned()])
-        .with_ack_timeout(Duration::from_secs(1))
-        .with_required_acks(RequiredAcks::One)
+
+    let producer: FutureProducer = ClientConfig::new()
+        .set("bootstrap.servers", "localhost:9092")
+        .set("message.timeout.ms", "1000")
         .create()
-    {
-        Err(why) => panic!("couldn't start producer : {}", why.description()),
-        Ok(producer) => producer,
-    };
+        .expect("Producer creation error");
 
     // Counter for ids
     let mut count = 0;
     loop {
         let tweet = build_tweet(template.to_owned(), count);
-        let key = format!("{{\\\"Id\\\": {}}}", count);
+        let key = format!("{{\"Id\": {}}}", count);
         count = count + 1;
-        match producer.send(&Record::from_key_value("twitter_json", key, tweet)) {
-            Err(why) => panic!("couldn't send message to Kafka : {}", why),
-            Ok(_) => (),
-        };
+
+        let time = SystemTime::now().duration_since(UNIX_EPOCH)
+            .unwrap();
+
+        producer.send_copy("twitter_json", None, Some(&tweet), Some(&key), time, 0)
+            .map(move |delivery_status| {   // This will be executed once the result is received
+                info!("Delivery status for message {} received", i);
+                delivery_status
+        });
 
         // Wait between messages
         let sec = time::Duration::from_secs(1);
