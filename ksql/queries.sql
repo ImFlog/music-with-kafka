@@ -56,7 +56,7 @@ SELECT \
 FROM twitter_clean \
 PARTITION BY ScreenName;
 
--- Actual JOIN query
+-- Actual JOIN query (Melody tweets per user)
 SELECT \
     cat.ScreenName AS ScreenName, \
     Max(utc.Count) AS TotalCount, \
@@ -64,7 +64,7 @@ SELECT \
 FROM category_tweets cat \
 LEFT JOIN user_tweet_count utc ON cat.ScreenName = utc.ScreenName \
 WHERE cat.IsMelody = true \
-AND utc.Count > 10 \
+AND utc.Count > 5 \
 GROUP BY cat.ScreenName;
 
 -- RECREATE charts like processor
