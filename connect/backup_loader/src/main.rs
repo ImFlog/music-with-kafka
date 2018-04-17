@@ -1,17 +1,18 @@
-extern crate rdkafka;
+//extern crate futures;
 extern crate rand;
+extern crate rdkafka;
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{thread, time};
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+//use futures::*;
 
 use rdkafka::config::ClientConfig;
 use rdkafka::producer::FutureProducer;
-use rdkafka::util::get_rdkafka_version;
-
+//use rdkafka::util::get_rdkafka_version;
 
 const SOURCES: [&'static str; 3] = ["iphone", "web", "android"];
 const TEXTS: [&'static str; 9] = [
@@ -53,14 +54,16 @@ fn main() {
         let key = format!("{{\"Id\": {}}}", count);
         count = count + 1;
 
-        let time = SystemTime::now().duration_since(UNIX_EPOCH)
-            .unwrap();
+        let time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
-        producer.send_copy("twitter_json", None, Some(&tweet), Some(&key), time, 0)
-            .map(move |delivery_status| {   // This will be executed once the result is received
-                info!("Delivery status for message {} received", i);
-                delivery_status
-        });
+        producer.send_copy(
+            "twitter_json",
+            None,
+            Some(&tweet),
+            Some(&key),
+            Some(time.as_secs() as i64),
+            0,
+        );
 
         // Wait between messages
         let sec = time::Duration::from_secs(1);
@@ -89,7 +92,7 @@ fn build_tweet(template: String, id: u64) -> String {
     let mut result = template;
     // Replace variable parts
     match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(n) => result = result.replace("${date}", &n.as_secs().to_string()),
+        Ok(n) => result = result.replace("${date}", &(n.as_secs() * 1000).to_string()),
         Err(_) => panic!("SystemTime before UNIX EPOCH!"),
     };
 

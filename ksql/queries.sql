@@ -68,13 +68,8 @@ AND utc.Count > 5 \
 GROUP BY cat.ScreenName;
 
 -- RECREATE charts like processor
--- Workaround for mandatory GROUP BY : https://github.com/confluentinc/ksql/issues/430
-CREATE STREAM twitter_foo AS \
-SELECT 1 AS FOO, * FROM twitter_clean;
-
--- Default commit interval is 10sec
-SELECT TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss.SSS') AS WINDOW_START, ScreenName, COUNT(*) \
-FROM twitter_foo \
+SELECT TIMESTAMPTOSTRING(ROWTIME * 1000, 'yyyy-MM-dd HH:mm:ss.SSS') AS WINDOW_START, ScreenName, COUNT(*) \
+FROM twitter_clean \
 WINDOW TUMBLING (SIZE 30 SECONDS) \
 WHERE Text LIKE '%drum%' \
-GROUP BY FOO, ScreenName;
+GROUP BY ROWTIME, ScreenName;
