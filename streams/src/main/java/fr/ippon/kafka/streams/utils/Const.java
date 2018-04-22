@@ -2,7 +2,7 @@ package fr.ippon.kafka.streams.utils;
 
 public final class Const {
 
-    public static final Long WINDOWING_TIME = 30L;
+    public static final Long WINDOWING_TIME = 30000L;
 
     // Input topics
     public static final String TWITTER_TOPIC = "twitter_json";

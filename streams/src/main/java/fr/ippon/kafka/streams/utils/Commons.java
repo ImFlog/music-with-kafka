@@ -3,9 +3,6 @@ package fr.ippon.kafka.streams.utils;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.state.KeyValueIterator;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Stream;
@@ -19,10 +16,6 @@ public final class Commons {
                         Spliterators.spliteratorUnknownSize(all, Spliterator.ORDERED),
                         false
                 );
-    }
-
-    public static String milliToDateString(long value) {
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.systemDefault()).toString();
     }
 
 }

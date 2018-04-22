@@ -1,4 +1,4 @@
-package fr.ippon.kafka.streams.domains;
+package fr.ippon.kafka.streams.domains.category;
 
 import lombok.AllArgsConstructor;
 

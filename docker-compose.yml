@@ -82,26 +82,4 @@ services:
       KSQL_LOG4J_OPTS: "-Dlog4j.configuration=file:/etc/ksql/log4j-rolling.properties"
     extra_hosts:
       - "moby:127.0.0.1"
-  
-  emitter:
-    build:
-      context: ./emitter
-    network_mode: "host"
-    volumes:
-      - "$HOME/.gradle:/root/.gradle"
-    depends_on:
-      - zookeeper
-      - kafka
-      - streams
-      - topic
-
-  streams:
-    build:
-      context: ./streams
-    network_mode: host
-    volumes:
-      - "$HOME/.gradle:/root/.gradle"      
-    depends_on:
-      - zookeeper
-      - kafka
-      - topic
+      

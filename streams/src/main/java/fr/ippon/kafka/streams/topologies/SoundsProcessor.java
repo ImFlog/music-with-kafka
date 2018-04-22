@@ -1,8 +1,8 @@
 package fr.ippon.kafka.streams.topologies;
 
-import fr.ippon.kafka.streams.domains.Categories;
-import fr.ippon.kafka.streams.domains.SoundMessage;
-import fr.ippon.kafka.streams.domains.TwitterStatus;
+import fr.ippon.kafka.streams.domains.category.Categories;
+import fr.ippon.kafka.streams.domains.sound.SoundMessage;
+import fr.ippon.kafka.streams.domains.twitter.TwitterStatus;
 import fr.ippon.kafka.streams.utils.Audio;
 import fr.ippon.kafka.streams.utils.Commons;
 import org.apache.kafka.streams.KeyValue;
@@ -16,16 +16,15 @@ import java.util.Comparator;
 import java.util.function.Function;
 
 import static fr.ippon.kafka.streams.utils.Const.TOP_SONG;
+import static fr.ippon.kafka.streams.utils.Const.WINDOWING_TIME;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
 public class SoundsProcessor implements Processor<String, TwitterStatus> {
 
-    private static final int INTERVAL = 30000;
     private static final String TOPS = "TOPS";
     private static final int MAX_SIZE = 5;
     private final Categories categories = Audio.retrieveAvailableCategories();
-    private boolean isLaunched = false;
     private ProcessorContext context;
     private KeyValueStore<String, Long> kvStore;
 
@@ -34,7 +33,7 @@ public class SoundsProcessor implements Processor<String, TwitterStatus> {
     public void init(ProcessorContext context) {
         this.context = context;
         this.kvStore = (KeyValueStore) context.getStateStore(TOP_SONG);
-        context.schedule(INTERVAL, PunctuationType.WALL_CLOCK_TIME, getPunctuator());
+        context.schedule(WINDOWING_TIME, PunctuationType.WALL_CLOCK_TIME, getPunctuator());
     }
 
     @Override

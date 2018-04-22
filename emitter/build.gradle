@@ -19,7 +19,7 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
 group = 'fr.ippon'
-archivesBaseName = 'streamer'
+archivesBaseName = 'emitter'
 version = '1.0'
 sourceCompatibility = 1.8
 compileKotlin {

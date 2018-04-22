@@ -1,8 +1,0 @@
-{
-  "namespace": "fr.ippon.kafka.streams.avro",
-  "type": "record",
-  "name": "SoundMessage",
-  "fields": [
-    {"name": "sounds", "type": { "type": "array", "items": "string" }}
-  ]
-}

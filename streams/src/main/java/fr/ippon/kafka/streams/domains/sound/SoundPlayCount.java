@@ -1,4 +1,4 @@
-package fr.ippon.kafka.streams.domains;
+package fr.ippon.kafka.streams.domains.sound;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

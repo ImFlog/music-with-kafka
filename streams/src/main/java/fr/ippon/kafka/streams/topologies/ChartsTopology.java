@@ -1,8 +1,8 @@
 package fr.ippon.kafka.streams.topologies;
 
-import fr.ippon.kafka.streams.domains.Categories;
-import fr.ippon.kafka.streams.domains.ChartMessage;
-import fr.ippon.kafka.streams.domains.TwitterStatus;
+import fr.ippon.kafka.streams.domains.category.Categories;
+import fr.ippon.kafka.streams.domains.chart.ChartMessage;
+import fr.ippon.kafka.streams.domains.twitter.TwitterStatus;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
 import fr.ippon.kafka.streams.utils.Audio;
 import fr.ippon.kafka.streams.utils.Commons;
@@ -53,16 +53,12 @@ public class ChartsTopology implements CommandLineRunner {
         // We want the charts to be updated every 5 seconds
         settings.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 1_000L);
 
-        // Enable exactly once
-//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
 
-        // We can also set Consumer properties
-//        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         return new StreamsConfig(settings);
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
 
         // Create an instance of StreamsConfig from the Properties instance
         StreamsConfig config = kStreamConfig();
@@ -95,6 +91,11 @@ public class ChartsTopology implements CommandLineRunner {
 
     }
 
+    @PreDestroy
+    public void destroy() {
+        stream.close();
+    }
+
     public Stream<KeyValue<String, Long>> getChartsCountPerCategories() {
         KeyValueIterator<String, Long> it = chartsPerCategory().all();
         return Commons.iteratorToStream(it);
@@ -102,11 +103,6 @@ public class ChartsTopology implements CommandLineRunner {
 
     private ReadOnlyKeyValueStore<String, Long> chartsPerCategory() {
         return stream.store(CHART_PER_CATEGORY, QueryableStoreTypes.keyValueStore());
-    }
-
-    @PreDestroy
-    public void destroy() {
-        stream.close();
     }
 
 }

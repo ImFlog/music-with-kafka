@@ -1,4 +1,4 @@
-package fr.ippon.kafka.streams.domains;
+package fr.ippon.kafka.streams.domains.twitter;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

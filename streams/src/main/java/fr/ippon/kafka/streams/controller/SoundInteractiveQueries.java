@@ -1,6 +1,6 @@
 package fr.ippon.kafka.streams.controller;
 
-import fr.ippon.kafka.streams.domains.SoundPlayCount;
+import fr.ippon.kafka.streams.domains.sound.SoundPlayCount;
 import fr.ippon.kafka.streams.topologies.SoundsTopology;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;

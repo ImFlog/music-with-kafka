@@ -1,4 +1,4 @@
-package fr.ippon.kafka.streams.domains;
+package fr.ippon.kafka.streams.domains.category;
 
 import java.util.*;
 import java.util.stream.Collectors;

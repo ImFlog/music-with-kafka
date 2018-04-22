@@ -1,8 +1,8 @@
 package fr.ippon.kafka.streams.utils;
 
-import fr.ippon.kafka.streams.domains.Categories;
-import fr.ippon.kafka.streams.domains.CategoriesCollector;
-import fr.ippon.kafka.streams.domains.TwitterStatus;
+import fr.ippon.kafka.streams.domains.category.Categories;
+import fr.ippon.kafka.streams.domains.category.CategoriesCollector;
+import fr.ippon.kafka.streams.domains.twitter.TwitterStatus;
 
 import java.io.File;
 import java.util.Arrays;
@@ -11,6 +11,9 @@ import java.util.Optional;
 public final class Audio {
 
     public static final String UNKNOW = "unknow";
+    private static final String DASH_SEPARATOR = "-";
+    private static final String UNDERSCORE_SEPARATOR = "_";
+    private static final String SPACE_SEPARATOR = " ";
 
     /**
      * Read audio directory and count the number of .ogg files in each directory.
@@ -59,7 +62,7 @@ public final class Audio {
         String tweetText = value.getText().toLowerCase();
         return tweetText.contains(category) ||
                 tweetText.contains(category
-                        .replace("-", " ")
-                        .replace("_", " "));
+                        .replace(DASH_SEPARATOR, SPACE_SEPARATOR)
+                        .replace(UNDERSCORE_SEPARATOR, SPACE_SEPARATOR));
     }
 }

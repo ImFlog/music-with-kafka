@@ -1,34 +1,34 @@
 package fr.ippon.kafka.streams.topologies;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
-
-import fr.ippon.kafka.streams.domains.Chart;
-import fr.ippon.kafka.streams.domains.ChartMessage;
+import fr.ippon.kafka.streams.domains.chart.Chart;
+import fr.ippon.kafka.streams.domains.chart.ChartMessage;
 import fr.ippon.kafka.streams.utils.Commons;
 import fr.ippon.kafka.streams.utils.Const;
-import java.util.Comparator;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+import java.util.Comparator;
+
+import static fr.ippon.kafka.streams.utils.Const.WINDOWING_TIME;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toList;
+
 public class ChartsTransformer implements Transformer<String, Long, KeyValue<String, ChartMessage>> {
 
-    private static Long INTERVAL = 30300L;
-    private static Long INTERVAL_MIN = 5000L;
-    private ProcessorContext ctx;
+    private static final Long DELTA = 200L;
+    private static final Long INTERVAL_MIN = 5000L;
     private KeyValueStore<String, Long> kvStore;
 
     @Override
+    @SuppressWarnings("unchecked")
     public void init(ProcessorContext context) {
-        ctx = context;
-        kvStore = (KeyValueStore<String, Long>) ctx.getStateStore(Const.CHART_PER_CATEGORY);
+        kvStore = (KeyValueStore<String, Long>) context.getStateStore(Const.CHART_PER_CATEGORY);
         Comparator<KeyValue<String, Long>> comparator = Comparator.comparingLong(kv -> kv.value);
 
-        ctx.schedule(INTERVAL_MIN, PunctuationType.WALL_CLOCK_TIME, timestamp -> {
-            System.out.println("TRANSFORMER PUNCTUATE");
+        context.schedule(INTERVAL_MIN, PunctuationType.WALL_CLOCK_TIME, timestamp -> {
             ChartMessage charts = Commons
                     .iteratorToStream(kvStore.all())
                     .sorted(comparator.reversed())
@@ -42,7 +42,7 @@ public class ChartsTransformer implements Transformer<String, Long, KeyValue<Str
             }
         });
 
-        ctx.schedule(INTERVAL, PunctuationType.WALL_CLOCK_TIME, timestamp -> {
+        context.schedule(WINDOWING_TIME + DELTA, PunctuationType.WALL_CLOCK_TIME, timestamp -> {
             System.out.println("Clean state store");
             clean(kvStore);
         });

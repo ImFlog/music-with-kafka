@@ -1,18 +1,18 @@
-package fr.ippon.kafka.streams.domains;
+package fr.ippon.kafka.streams.domains.chart;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-public class Category {
+@AllArgsConstructor
+public class ChartMessage {
 
-    private String name;
-
-    private Integer count;
+    private List<Chart> charts;
 
 }

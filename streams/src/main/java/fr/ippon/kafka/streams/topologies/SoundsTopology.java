@@ -1,8 +1,8 @@
 package fr.ippon.kafka.streams.topologies;
 
-import fr.ippon.kafka.streams.domains.SoundMessage;
-import fr.ippon.kafka.streams.domains.SoundPlayCount;
-import fr.ippon.kafka.streams.domains.TwitterStatus;
+import fr.ippon.kafka.streams.domains.sound.SoundMessage;
+import fr.ippon.kafka.streams.domains.sound.SoundPlayCount;
+import fr.ippon.kafka.streams.domains.twitter.TwitterStatus;
 import fr.ippon.kafka.streams.serdes.SerdeException;
 import fr.ippon.kafka.streams.serdes.SerdeFactory;
 import fr.ippon.kafka.streams.utils.Commons;
@@ -30,7 +30,6 @@ public class SoundsTopology implements CommandLineRunner {
 
     private static final String APPLICATION_ID_VALUE = "SoundsTopology";
     private static final String BOOTSTRAP_SERVERS_VALUE = "localhost:9092";
-    private static final String AUTO_OFFSET_VALUE = "earliest";
     private static final String SOURCE_NODE = "Source";
     private static final String PROCESS_NODE = "Process";
     private static final String SINK_NODE = "Sink";
@@ -38,11 +37,6 @@ public class SoundsTopology implements CommandLineRunner {
 
     private KafkaStreams streams;
 
-    /**
-     * Init stream properties.
-     *
-     * @return the created stream settings.
-     */
     private static StreamsConfig kStreamConfig() {
 
         Properties settings = new Properties();
@@ -58,12 +52,6 @@ public class SoundsTopology implements CommandLineRunner {
         //ignore deserialization exception
         settings.put(StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG, SerdeException.class);
 
-
-        // Enable exactly once
-//        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
-
-        // We can also set Consumer properties
-//        settings.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, AUTO_OFFSET_VALUE);
         return new StreamsConfig(settings);
     }
 
@@ -102,6 +90,8 @@ public class SoundsTopology implements CommandLineRunner {
 
         // Clean local store between runs
         streams.cleanUp();
+
+        // Start topology
         streams.start();
 
 

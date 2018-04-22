@@ -1,6 +1,6 @@
 package fr.ippon.kafka.streams.controller;
 
-import fr.ippon.kafka.streams.domains.TwitterUserInfo;
+import fr.ippon.kafka.streams.domains.twitter.TwitterUserInfo;
 import fr.ippon.kafka.streams.topologies.UsersTopology;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
